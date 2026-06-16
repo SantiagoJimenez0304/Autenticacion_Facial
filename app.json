@@ -1,23 +1,32 @@
 {
   "expo": {
-    "name": "geo-face-app",
+    "name": "GeoFace",
     "slug": "geo-face-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "geofaceapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "La app necesita acceso a la cámara para el reconocimiento facial.",
+        "NSLocationWhenInUseUsageDescription": "La app necesita tu ubicación para verificar que estés en la zona designada.",
+        "NSPhotoLibraryUsageDescription": "La app necesita acceso a tus fotos para registrar perfiles faciales."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0A0A1A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -31,12 +40,25 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0A0A1A"
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La app necesita acceso a la cámara para reconocimiento facial."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "La app necesita tu ubicación para verificar que estés en la zona designada."
+        }
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     }
   }
 }
