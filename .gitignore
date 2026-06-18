@@ -43,8 +43,8 @@ yarn-error.*
 # Python virtual environments
 .venv/
 venv/
-ENV/
 env/
+ENV/
 face-server/.venv/
 face-server/venv/
 
@@ -57,4 +57,12 @@ __pycache__/
 # Local environment variables
 .env
 face-server/.env
+
+# Agents
+.agents/
+.cursorrules
+
+# Graphify
+graphify-out/
+.graphifyignore
 

@@ -3,6 +3,8 @@ import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
 export default function TabLayout() {
+  const isWeb = Platform.OS === 'web';
+
   return (
     <Tabs
       screenOptions={{
@@ -11,10 +13,10 @@ export default function TabLayout() {
           backgroundColor: 'rgba(20, 20, 40, 0.95)',
           borderTopColor: 'rgba(108, 92, 231, 0.2)',
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          height: isWeb ? 60 : Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom: isWeb ? 6 : Platform.OS === 'ios' ? 28 : 8,
           paddingTop: 8,
-          position: 'absolute',
+          ...(isWeb ? {} : { position: 'absolute' as const }),
           elevation: 0,
         },
         tabBarActiveTintColor: '#6C5CE7',

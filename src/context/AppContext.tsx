@@ -15,6 +15,7 @@ import {
     saveZone as storageSaveZone,
 } from '../services/storage';
 import { CheckIn, FaceProfile, LocationState, Zone } from '../types';
+import { getEmbedding, healthCheck } from '../services/faceApi';
 
 interface AppContextType {
   profiles: FaceProfile[];
@@ -85,7 +86,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id,
       name,
       photoUris: [],
-      faceDescriptor: null, // Simulated face descriptor vector
+      faceDescriptor: null,
       createdAt: new Date().toLocaleDateString('es-MX', {
         day: '2-digit',
         month: 'short',
@@ -96,13 +97,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (photoUri) {
       try {
-        // Save the actual photo in the file system
         const localPhotoUri = await saveFacePhoto(id, photoUri, 0);
         newProfile.photoUris = [localPhotoUri];
-        // Generate a mock 128D face descriptor
-        newProfile.faceDescriptor = Array.from({ length: 128 }, () => Math.random() * 2 - 1);
-      } catch (err) {
-        console.error('Error al guardar la foto de perfil:', err);
+
+          const serverOnline = await healthCheck();
+        if (serverOnline) {
+          const embedding = await getEmbedding(localPhotoUri);
+          newProfile.faceDescriptor = embedding || null;
+        }
+      } catch (err: any) {
+        console.error('Error al procesar foto facial:', err?.message || err);
       }
     }
 
@@ -114,13 +118,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateProfilePhoto = useCallback(async (id: string, photoUri: string) => {
     try {
       const localPhotoUri = await saveFacePhoto(id, photoUri, 0);
+      let faceDescriptor: number[] | null = null;
+
+      try {
+        const serverOnline = await healthCheck();
+        if (serverOnline) {
+          faceDescriptor = await getEmbedding(localPhotoUri);
+        }
+      } catch (err: any) {
+        console.error('Error al obtener embedding facial:', err?.message || err);
+      }
+
       setProfiles((prev) =>
         prev.map((p) => {
           if (p.id === id) {
             const updated = {
               ...p,
               photoUris: [localPhotoUri],
-              faceDescriptor: Array.from({ length: 128 }, () => Math.random() * 2 - 1),
+              faceDescriptor,
               updatedAt: new Date().toISOString(),
             };
             storageSaveProfile(updated);
