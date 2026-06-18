@@ -1,0 +1,2 @@
+export const EXPECTED_EMBEDDING_DIM = 512;
+export const FACE_SERVER_PORT = 5005;

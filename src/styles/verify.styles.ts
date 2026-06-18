@@ -10,6 +10,22 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  bgCircle1: {
+    position: 'absolute',
+    top: -40,
+    right: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(108, 92, 231, 0.08)',
+  },
+  bgCircle2: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(0, 206, 201, 0.06)',
+  },
   // Permission screen
   permissionContainer: {
     flex: 1,
@@ -357,7 +373,8 @@ export const styles = StyleSheet.create({
   resultMetaText: {
     fontSize: 13,
     color: COLORS.textMuted,
-  },  resultDismissBtn: {
+  },
+  resultDismissBtn: {
     backgroundColor: COLORS.surfaceLight,
     paddingVertical: 14,
     paddingHorizontal: 48,
@@ -369,6 +386,23 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: COLORS.textSecondary,
+  },
+  resultRetryBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 14,
+    marginBottom: 10,
+  },
+  resultRetryText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  resultActions: {
+    gap: 8,
+    width: '100%',
+    alignItems: 'center',
   },
   distanceBadge: {
     flexDirection: 'row',
@@ -409,5 +443,63 @@ export const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 6,
     textAlign: 'center',
+  },
+  // Error banner inline (reemplaza alertas nativas)
+  errorBannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(10, 10, 26, 0.88)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 90,
+    paddingHorizontal: 24,
+  },
+  errorBannerCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 28,
+    paddingVertical: 32,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+  },
+  errorBannerIconBg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  errorBannerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorBannerMessage: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  errorBannerRetryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 36,
+    borderRadius: 14,
+    gap: 8,
+  },
+  errorBannerRetryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

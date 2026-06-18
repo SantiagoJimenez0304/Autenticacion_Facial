@@ -1,0 +1,9 @@
+flask==3.0.3
+deepface==0.0.92
+opencv-python
+Pillow
+numpy>=1.21.2,<2.0.0
+tensorflow==2.15.0
+flask-cors>=4.0.0
+torch
+torchvision

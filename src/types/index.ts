@@ -26,7 +26,7 @@ export interface FaceProfile {
   id: string;
   name: string;
   photoUris: string[]; // stored photo URIs
-  faceDescriptor: number[] | null; // 128D face embedding vector
+  faceDescriptor: number[] | null; // 512D face embedding vector (Facenet512)
   createdAt: string;
   updatedAt: string;
 }

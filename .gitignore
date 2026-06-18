@@ -39,3 +39,16 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Python Virtual Environments
+.venv/
+venv/
+env/
+
+# Agents
+.agents/
+.cursorrules
+
+# Graphify
+graphify-out/
+.graphifyignore
