@@ -1,0 +1,385 @@
+{
+  "communities": {
+    "0": [
+      "components_checkinitem",
+      "components_checkinitem_checkinitem",
+      "components_checkinitem_checkinitemprops",
+      "components_resultoverlay",
+      "components_resultoverlay_resultoverlay",
+      "components_resultoverlay_resultoverlayprops",
+      "components_resultoverlay_verifyresult",
+      "components_statscard",
+      "components_statscard_statscard",
+      "components_statscard_statscardprops",
+      "constants_index",
+      "constants_index_border_radius",
+      "constants_index_colors",
+      "constants_index_default_zones",
+      "constants_index_font_sizes",
+      "constants_index_gradients",
+      "constants_index_spacing",
+      "screens_dashboardscreen",
+      "screens_verifyscreen",
+      "screens_verifyscreen_errorbanner",
+      "screens_verifyscreen_verifyresult",
+      "styles_index_styles",
+      "styles_index_styles_styles",
+      "styles_index_styles_width",
+      "styles_verify_styles",
+      "styles_verify_styles_styles",
+      "styles_verify_styles_width",
+      "tabs_index",
+      "tabs_verify",
+      "utils_format",
+      "utils_format_formatcheckindate",
+      "utils_format_formatdate",
+      "utils_format_formatrelativetime",
+      "utils_format_formattime"
+    ],
+    "1": [
+      "app",
+      "app_adaptiveicon_backgroundcolor",
+      "app_adaptiveicon_backgroundimage",
+      "app_adaptiveicon_foregroundimage",
+      "app_adaptiveicon_monochromeimage",
+      "app_android_adaptiveicon",
+      "app_android_permissions",
+      "app_experiments_typedroutes",
+      "app_expo",
+      "app_expo_android",
+      "app_expo_experiments",
+      "app_expo_icon",
+      "app_expo_ios",
+      "app_expo_name",
+      "app_expo_orientation",
+      "app_expo_plugins",
+      "app_expo_scheme",
+      "app_expo_slug",
+      "app_expo_userinterfacestyle",
+      "app_expo_version",
+      "app_expo_web",
+      "app_infoplist_nscamerausagedescription",
+      "app_infoplist_nslocationwheninuseusagedescription",
+      "app_infoplist_nsphotolibraryusagedescription",
+      "app_ios_infoplist",
+      "app_ios_supportstablet",
+      "app_web_bundler",
+      "app_web_favicon",
+      "app_web_output"
+    ],
+    "2": [
+      "app_layout",
+      "app_layout_rootlayout",
+      "app_layout_styles",
+      "context_appcontext",
+      "context_appcontext_appcontext",
+      "context_appcontext_appcontexttype",
+      "context_appcontext_appprovider",
+      "hooks_uselocation_uselocation",
+      "services_storage",
+      "services_storage_addcheckin",
+      "services_storage_clearcheckins",
+      "services_storage_deleteprofile",
+      "services_storage_deletezone",
+      "services_storage_ensurephotodir",
+      "services_storage_getcheckins",
+      "services_storage_getprofiles",
+      "services_storage_getthreshold",
+      "services_storage_getzones",
+      "services_storage_keys",
+      "services_storage_savefacephoto",
+      "services_storage_saveprofile",
+      "services_storage_savethreshold",
+      "services_storage_savezone",
+      "services_storage_securegetitem",
+      "services_storage_secureremoveitem",
+      "services_storage_securesetitem",
+      "types_index_checkin",
+      "types_index_locationstate"
+    ],
+    "3": [
+      "context_zonescontext",
+      "context_zonescontext_usezones",
+      "context_zonescontext_zonescontext",
+      "context_zonescontext_zonescontexttype",
+      "context_zonescontext_zonesprovider",
+      "hooks_uselocation",
+      "screens_dashboardscreen_dashboardscreen",
+      "services_location",
+      "services_location_getcurrentlocation",
+      "services_location_requestlocationpermissions",
+      "services_location_watchlocation",
+      "tabs_location_test",
+      "tabs_location_test_colors",
+      "tabs_location_test_demo_zone",
+      "tabs_location_test_locationtestscreen",
+      "tabs_location_test_styles",
+      "types_index",
+      "types_index_appscreen",
+      "types_index_appstate",
+      "types_index_latlng",
+      "types_index_verificationresult",
+      "types_index_zone",
+      "utils_geo",
+      "utils_geo_calculatedistance",
+      "utils_geo_findnearestzone",
+      "utils_geo_formatdistance",
+      "utils_geo_ispointinzone"
+    ],
+    "4": [
+      "package_dependencies",
+      "package_dependencies_async_storage",
+      "package_dependencies_expo",
+      "package_dependencies_expo_camera",
+      "package_dependencies_expo_constants",
+      "package_dependencies_expo_file_system",
+      "package_dependencies_expo_font",
+      "package_dependencies_expo_haptics",
+      "package_dependencies_expo_image_picker",
+      "package_dependencies_expo_linking",
+      "package_dependencies_expo_location",
+      "package_dependencies_expo_router",
+      "package_dependencies_expo_secure_store",
+      "package_dependencies_expo_splash_screen",
+      "package_dependencies_expo_status_bar",
+      "package_dependencies_expo_symbols",
+      "package_dependencies_expo_vector_icons",
+      "package_dependencies_expo_web_browser",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_native",
+      "package_dependencies_react_native_async_storage_async_storage",
+      "package_dependencies_react_native_reanimated",
+      "package_dependencies_react_native_safe_area_context",
+      "package_dependencies_react_native_screens",
+      "package_dependencies_react_native_web"
+    ],
+    "5": [
+      "components_profilecard",
+      "components_profilecard_avatar_colors",
+      "components_profilecard_getavatarcolor",
+      "components_profilecard_profilecard",
+      "components_profilecard_profilecardprops",
+      "context_appcontext_useapp",
+      "screens_profilesscreen",
+      "screens_profilesscreen_profilesscreen",
+      "screens_settingsscreen",
+      "screens_settingsscreen_settingsscreen",
+      "screens_verifyscreen_verifyscreen",
+      "styles_profiles_styles",
+      "styles_profiles_styles_styles",
+      "styles_settings_styles",
+      "styles_settings_styles_styles",
+      "tabs_profiles",
+      "tabs_settings",
+      "types_index_faceprofile",
+      "utils_alert",
+      "utils_alert_alertbutton",
+      "utils_alert_showalert",
+      "utils_alert_showwebalert",
+      "utils_format_getinitials"
+    ],
+    "6": [
+      "tsconfig",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_allowsyntheticdefaultimports",
+      "tsconfig_compileroptions_esmoduleinterop",
+      "tsconfig_compileroptions_jsx",
+      "tsconfig_compileroptions_lib",
+      "tsconfig_compileroptions_module",
+      "tsconfig_compileroptions_moduleresolution",
+      "tsconfig_compileroptions_paths",
+      "tsconfig_compileroptions_resolvejsonmodule",
+      "tsconfig_compileroptions_skiplibcheck",
+      "tsconfig_compileroptions_strict",
+      "tsconfig_compileroptions_target",
+      "tsconfig_compileroptions_usedefineforclassfields",
+      "tsconfig_exclude",
+      "tsconfig_extends",
+      "tsconfig_include",
+      "tsconfig_paths"
+    ],
+    "7": [
+      "services_faceapi",
+      "services_faceapi_api_base",
+      "services_faceapi_faceapierror",
+      "services_faceapi_faceapierror_constructor",
+      "services_faceapi_getembedding",
+      "services_faceapi_getserveraddress",
+      "services_faceapi_getserverhost",
+      "services_faceapi_healthcheck",
+      "services_faceapi_phototobase64",
+      "services_faceapi_representresponse",
+      "services_faceapi_request",
+      "services_faceapi_setserveraddress",
+      "services_faceapi_verifyface",
+      "services_faceapi_verifymatch",
+      "services_faceapi_verifyresponse"
+    ],
+    "8": [
+      "package",
+      "package_devdependencies",
+      "package_devdependencies_expo_ngrok",
+      "package_devdependencies_types_react",
+      "package_devdependencies_typescript",
+      "package_main",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_android",
+      "package_scripts_ios",
+      "package_scripts_start",
+      "package_scripts_web",
+      "package_version"
+    ],
+    "9": [
+      "face_server_server",
+      "face_server_server_extract_image",
+      "face_server_server_health",
+      "face_server_server_l2_normalize",
+      "face_server_server_load_image_from_base64",
+      "face_server_server_represent",
+      "face_server_server_verify",
+      "face_server_server_warmup"
+    ],
+    "10": [
+      "face_server_test_deepface",
+      "face_server_test_deepface_load_image_from_base64"
+    ],
+    "11": [
+      "tabs_layout",
+      "tabs_layout_tablayout"
+    ],
+    "12": [
+      "utils_face"
+    ]
+  },
+  "cohesion": {
+    "0": 0.09982174688057041,
+    "1": 0.06896551724137931,
+    "2": 0.16137566137566137,
+    "3": 0.1339031339031339,
+    "4": 0.07692307692307693,
+    "5": 0.1422924901185771,
+    "6": 0.1111111111111111,
+    "7": 0.1619047619047619,
+    "8": 0.14285714285714285,
+    "9": 0.5,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0
+  },
+  "gods": [
+    {
+      "id": "app_expo",
+      "label": "expo",
+      "degree": 13
+    },
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 13
+    },
+    {
+      "id": "constants_index_colors",
+      "label": "COLORS",
+      "degree": 12
+    },
+    {
+      "id": "types_index_zone",
+      "label": "Zone",
+      "degree": 10
+    },
+    {
+      "id": "context_appcontext_useapp",
+      "label": "useApp()",
+      "degree": 9
+    },
+    {
+      "id": "services_storage_securesetitem",
+      "label": "secureSetItem()",
+      "degree": 8
+    },
+    {
+      "id": "types_index_faceprofile",
+      "label": "FaceProfile",
+      "degree": 7
+    },
+    {
+      "id": "app_android_adaptiveicon",
+      "label": "adaptiveIcon",
+      "degree": 5
+    },
+    {
+      "id": "face_server_server_represent",
+      "label": "represent()",
+      "degree": 5
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 5
+    }
+  ],
+  "surprises": [
+    {
+      "source": "LocationTestScreen()",
+      "target": "formatDistance()",
+      "source_files": [
+        "app/(tabs)/location-test.tsx",
+        "src/utils/geo.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `LocationTestScreen()` unexpectedly reaches hub `formatDistance()`"
+    },
+    {
+      "source": "ProfileCardProps",
+      "target": "FaceProfile",
+      "source_files": [
+        "src/components/ProfileCard.tsx",
+        "src/types/index.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "peripheral node `ProfileCardProps` unexpectedly reaches hub `FaceProfile`"
+    },
+    {
+      "source": "AppContextType",
+      "target": "FaceProfile",
+      "source_files": [
+        "src/context/AppContext.tsx",
+        "src/types/index.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "AppContextType",
+      "target": "Zone",
+      "source_files": [
+        "src/context/AppContext.tsx",
+        "src/types/index.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "DashboardScreen()",
+      "target": "useApp()",
+      "source_files": [
+        "src/screens/DashboardScreen.tsx",
+        "src/context/AppContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}
