@@ -27,7 +27,7 @@ export default function EnrollScreen() {
   const [cameraFlash, setCameraFlash] = useState<'off' | 'on'>('off');
   
   const { addProfile } = useApp();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   const handleCapture = async () => {
     if (!cameraRef.current || !currentUser) return;
@@ -99,7 +99,18 @@ export default function EnrollScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerGlass}>
-        <Text style={styles.headerTitle}>Tu Foto de Perfil</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 8 }}>
+          <Text style={{ color: COLORS.text, fontSize: 22, fontWeight: 'bold' }}>Tu Foto de Perfil</Text>
+          <TouchableOpacity 
+            onPress={async () => {
+              await logout();
+              router.replace('/login');
+            }}
+            style={{ padding: 4 }}
+          >
+            <Ionicons name="log-out-outline" size={28} color={COLORS.danger} />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.headerSubtitle}>
           Toma una foto de tu rostro. Esta será tu foto de referencia oficial para registrar tu asistencia todos los días.
         </Text>
