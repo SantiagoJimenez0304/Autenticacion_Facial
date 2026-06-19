@@ -6,7 +6,6 @@ import cv2
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from deepface import DeepFace
-from PIL import Image
 
 app = Flask(__name__)
 CORS(app)
@@ -17,13 +16,21 @@ THRESHOLD = float(os.getenv('MATCH_THRESHOLD', '0.35'))
 PORT = int(os.getenv('PORT', 5005))
 ANTI_SPOOFING = os.getenv('ANTI_SPOOFING', '1').lower() in ('1', 'true', 'yes')
 
+class ImageDecodeError(Exception):
+    pass
+
 def load_image_from_base64(img_str):
-    if ',' in img_str:
-        img_str = img_str.split(',')[1]
-    img_bytes = base64.b64decode(img_str)
-    arr = np.frombuffer(img_bytes, np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    return img
+    try:
+        if ',' in img_str:
+            img_str = img_str.split(',')[1]
+        img_bytes = base64.b64decode(img_str)
+        arr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ImageDecodeError("La imagen decodificada está vacía o es inválida")
+        return img
+    except Exception as e:
+        raise ImageDecodeError(f"Fallo al decodificar base64: {str(e)}")
 
 
 def l2_normalize(embedding):
@@ -82,6 +89,12 @@ def verify():
         return jsonify({'error': 'Campo "image" requerido'}), 400
     if not stored_embeddings:
         return jsonify({'error': 'Campo "embeddings" requerido'}), 400
+    if len(stored_embeddings) > 1000:
+        return jsonify({'error': 'Superado el límite de 1000 embeddings por solicitud'}), 400
+        
+    for s in stored_embeddings:
+        if not isinstance(s, dict) or 'id' not in s or 'embedding' not in s:
+            return jsonify({'error': 'Estructura de embeddings inválida. Falta id o embedding'}), 400
 
     try:
         image_input = load_image_from_base64(image_input_str)
@@ -179,7 +192,6 @@ def _warmup():
     print('  (Esto puede tomar 30-60s en la primera ejecucion)')
     print(f'  Modelo: {MODEL_NAME}, Detector: {DETECTOR_BACKEND}')
     try:
-        import numpy as np
         # Usar una imagen dummy de 224x224 para asegurar que el detector y el modelo se inicialicen correctamente
         dummy = np.zeros((224, 224, 3), dtype=np.uint8)
         DeepFace.represent(

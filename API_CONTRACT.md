@@ -7,7 +7,7 @@ The GeoFace app interacts with a Python Flask server running DeepFace.
 ## Endpoints
 
 ### 1. Health Check
-`GET /health`
+`GET /v1/health`
 - **Response:** `{ "status": "ok" }`
 
 ### 2. Get Embedding (Represent)
@@ -15,16 +15,16 @@ The GeoFace app interacts with a Python Flask server running DeepFace.
 - **Request Body:**
   ```json
   {
-    "image": "base64_encoded_image_string",
-    "model_name": "Facenet512",
-    "detector_backend": "opencv"
+    "image": "base64_encoded_image_string"
   }
   ```
 - **Response:**
   ```json
   {
-    "embedding": [0.12, -0.45, ...], // 512 dimensions
-    "face_confidence": 0.98
+    "embedding": [0.12, -0.45, ...],
+    "face_confidence": 0.98,
+    "model": "Facenet512",
+    "dimensions": 512
   }
   ```
 
@@ -33,8 +33,8 @@ The GeoFace app interacts with a Python Flask server running DeepFace.
 - **Request Body:**
   ```json
   {
-    "img1_path": "base64_encoded_image_string",
-    "profiles": [
+    "image": "base64_encoded_image_string",
+    "embeddings": [
       { "id": "uuid", "embedding": [...] },
       ...
     ]
@@ -45,6 +45,6 @@ The GeoFace app interacts with a Python Flask server running DeepFace.
   {
     "verified": true,
     "best_match": { "id": "uuid", "confidence": 95.5 },
-    "results": [...]
+    "matches": [...]
   }
   ```

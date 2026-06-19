@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
@@ -11,7 +12,7 @@ interface CheckInItemProps {
   formattedDate: string;
 }
 
-export default function CheckInItem({ isMatch, confidence, profileName, zoneName, formattedDate }: CheckInItemProps) {
+export default memo(function CheckInItem({ isMatch, confidence, profileName, zoneName, formattedDate }: CheckInItemProps) {
   return (
     <View style={styles.checkInCard}>
       <View
@@ -59,4 +60,4 @@ export default function CheckInItem({ isMatch, confidence, profileName, zoneName
       </View>
     </View>
   );
-}
+});

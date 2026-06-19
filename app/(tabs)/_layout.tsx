@@ -1,9 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function TabLayout() {
   const isWeb = Platform.OS === 'web';
+  const { currentUser } = useAuth();
+
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <Tabs
@@ -34,6 +38,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="location" size={size} color={color} />
           ),
+          // Solo admins ven el Dashboard
+          href: isAdmin ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -43,6 +49,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
+          // Solo admins ven Perfiles
+          href: isAdmin ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -52,6 +60,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="scan" size={size} color={color} />
           ),
+          // Todos ven Verificar
         }}
       />
       <Tabs.Screen
@@ -61,6 +70,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),
+          // Todos ven Ajustes
         }}
       />
       <Tabs.Screen
@@ -70,6 +80,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="compass" size={size} color={color} />
           ),
+          // Solo admins ven Ubicación
+          href: isAdmin ? undefined : null,
         }}
       />
     </Tabs>

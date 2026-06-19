@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
@@ -20,7 +21,7 @@ interface ResultOverlayProps {
   onRetry?: () => void;
 }
 
-export default function ResultOverlay({ result, threshold, zoneName, onDismiss, onRetry }: ResultOverlayProps) {
+export default memo(function ResultOverlay({ result, threshold, zoneName, onDismiss, onRetry }: ResultOverlayProps) {
   return (
     <TouchableOpacity style={styles.resultOverlay} activeOpacity={1} onPress={onDismiss}>
       <View style={styles.resultCard}>
@@ -105,4 +106,4 @@ export default function ResultOverlay({ result, threshold, zoneName, onDismiss, 
       </View>
     </TouchableOpacity>
   );
-}
+});

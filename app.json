@@ -25,8 +25,13 @@
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.erraser.geofaceapp"
     },
     "web": {
       "bundler": "metro",
@@ -52,13 +57,19 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "La app necesita tu ubicación para verificar que estés en la zona designada."
+          "locationWhenInUsePermission": "La app necesita tu ubicación para verificar que estés en la zona designada."
         }
       ],
       "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b497ac1c-dee6-43ea-8756-2f41f76ffc35"
+      }
     }
   }
 }

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import {
+  Animated,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,12 +15,53 @@ import { formatCheckInDate } from '../utils/format';
 import { styles } from '../styles/index.styles';
 import StatsCard from '../components/StatsCard';
 import CheckInItem from '../components/CheckInItem';
+import { showAlert } from '../utils/alert';
+
+const TrackingDot = memo(function TrackingDot({ isTracking }: { isTracking: boolean }) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isTracking) {
+      pulseAnim.setValue(1);
+      return;
+    }
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [isTracking, pulseAnim]);
+
+  return (
+    <View style={styles.trackingDotContainer}>
+      <Animated.View
+        style={[
+          styles.trackingDot,
+          {
+            backgroundColor: isTracking ? COLORS.success : COLORS.danger,
+            opacity: isTracking ? pulseAnim : 1,
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.trackingDotGlow,
+          {
+            backgroundColor: isTracking ? COLORS.success : COLORS.danger,
+            opacity: isTracking ? pulseAnim.interpolate({ inputRange: [0.3, 1], outputRange: [0.1, 0.3] }) : 0,
+          },
+        ]}
+      />
+    </View>
+  );
+});
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { isLoading, checkIns, locationState, startLocationTracking, stopLocationTracking } = useApp();
-  const [pulseOpacity, setPulseOpacity] = useState(1);
-
   const {
     currentLocation = null,
     isInZone = false,
@@ -28,14 +70,6 @@ export default function DashboardScreen() {
     isTracking = false,
     error = null,
   } = locationState || {};
-
-  useEffect(() => {
-    if (!isTracking) return;
-    const interval = setInterval(() => {
-      setPulseOpacity((prev) => (prev === 1 ? 0.3 : 1));
-    }, 800);
-    return () => clearInterval(interval);
-  }, [isTracking]);
 
   if (isLoading) {
     return (
@@ -72,11 +106,14 @@ export default function DashboardScreen() {
             <Text style={styles.appTitle}>GeoFace</Text>
             <Text style={styles.appSubtitle}>Control de asistencia inteligente</Text>
           </View>
-          <TouchableOpacity style={styles.notificationBtn} onPress={() => {
+          <TouchableOpacity 
+            style={styles.notificationBtn} 
+            accessibilityLabel="Notificaciones"
+            onPress={() => {
             if (error) {
-              alert(error);
+              showAlert('Error de Ubicación', error);
             } else {
-              alert("Sistema GPS activo y funcionando.");
+              showAlert('Estado', 'Sistema GPS activo y funcionando.');
             }
           }}>
             <Ionicons name="notifications-outline" size={24} color={COLORS.textSecondary} />
@@ -87,26 +124,7 @@ export default function DashboardScreen() {
         <View style={styles.trackingCard}>
           <View style={styles.trackingCardInner}>
             <View style={styles.trackingHeader}>
-              <View style={styles.trackingDotContainer}>
-                <View
-                  style={[
-                    styles.trackingDot,
-                    {
-                      backgroundColor: isTracking ? COLORS.success : COLORS.danger,
-                      opacity: isTracking ? pulseOpacity : 1,
-                    },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.trackingDotGlow,
-                    {
-                      backgroundColor: isTracking ? COLORS.success : COLORS.danger,
-                      opacity: isTracking ? pulseOpacity * 0.3 : 0,
-                    },
-                  ]}
-                />
-              </View>
+              <TrackingDot isTracking={isTracking} />
               <Text style={styles.trackingText}>
                 {isTracking ? 'GPS Activo' : 'GPS Inactivo'}
               </Text>
@@ -118,6 +136,7 @@ export default function DashboardScreen() {
                   styles.trackingToggle,
                   { backgroundColor: isTracking ? 'rgba(0, 184, 148, 0.15)' : 'rgba(255, 118, 117, 0.15)' },
                 ]}
+                accessibilityLabel="Alternar Rastreo GPS"
                 onPress={toggleTracking}
               >
                 <Ionicons
@@ -199,6 +218,7 @@ export default function DashboardScreen() {
           ]}
           disabled={!isInZone}
           activeOpacity={0.8}
+          accessibilityLabel="Verificar Identidad"
           onPress={() => router.push('/(tabs)/verify')}
         >
           {isInZone && <View style={styles.verifyButtonGlow} />}
@@ -213,7 +233,7 @@ export default function DashboardScreen() {
         {/* Recent Check-ins */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Registros Recientes</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/verify')}>
+          <TouchableOpacity accessibilityLabel="Nuevo Registro" onPress={() => router.push('/(tabs)/verify')}>
             <Text style={styles.sectionAction}>Nuevo Registro</Text>
           </TouchableOpacity>
         </View>

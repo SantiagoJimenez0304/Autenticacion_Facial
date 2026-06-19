@@ -15,10 +15,41 @@ export function useLocation(zones: Zone[]) {
   });
 
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const zonesRef = useRef(zones);
+
+  // Mantener la referencia de zonas actualizada y re-evaluar si ya tenemos ubicación
+  useEffect(() => {
+    zonesRef.current = zones;
+    
+    // Si la app cargó el GPS antes que las zonas, re-evaluamos al recibir las zonas
+    setState((prev) => {
+      if (!prev.currentLocation) return prev;
+      
+      const { zone, distance } = findNearestZone(prev.currentLocation, zones);
+      const inZone = zone ? isPointInZone(prev.currentLocation, zone) : false;
+      
+      // Evitar updates innecesarios si no cambió nada
+      if (
+        prev.nearestZone?.id === zone?.id &&
+        prev.isInZone === inZone &&
+        prev.distanceToZone === distance
+      ) {
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        nearestZone: zone,
+        isInZone: inZone,
+        distanceToZone: distance,
+      };
+    });
+  }, [zones]);
 
   const updateLocation = useCallback(
     (location: LatLng) => {
-      const { zone, distance } = findNearestZone(location, zones);
+      const currentZones = zonesRef.current;
+      const { zone, distance } = findNearestZone(location, currentZones);
       const inZone = zone ? isPointInZone(location, zone) : false;
 
       setState({
@@ -30,7 +61,7 @@ export function useLocation(zones: Zone[]) {
         error: null,
       });
     },
-    [zones]
+    []
   );
 
   const startTracking = useCallback(async () => {

@@ -10,9 +10,9 @@ if (Platform.OS !== 'web') {
 }
 
 const KEYS = {
-  PROFILES: '@geo_face_profiles',
-  ZONES: '@geo_face_zones',
-  CHECKINS: '@geo_face_checkins',
+  PROFILES: 'geo_face_profiles',
+  ZONES: 'geo_face_zones',
+  CHECKINS: 'geo_face_checkins',
 };
 
 const FACE_PHOTOS_DIR = Platform.OS !== 'web' && FileSystem
@@ -50,18 +50,26 @@ async function secureGetItem(key: string): Promise<string | null> {
 }
 
 async function secureSetItem(key: string, value: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    await AsyncStorage.setItem(key, value);
-  } else {
-    await SecureStore.setItemAsync(key, value);
+  try {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  } catch (err: unknown) {
+    console.error('Error secureSetItem:', err);
   }
 }
 
 async function secureRemoveItem(key: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    await AsyncStorage.removeItem(key);
-  } else {
-    await SecureStore.deleteItemAsync(key);
+  try {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  } catch (err: unknown) {
+    console.error('Error secureRemoveItem:', err);
   }
 }
 
@@ -123,7 +131,12 @@ export async function saveFacePhoto(
     await FileSystem!.makeDirectoryAsync(profileDir, { intermediates: true });
   }
   const destUri = `${profileDir}face_${index}.jpg`;
-  await FileSystem!.copyAsync({ from: photoUri, to: destUri });
+  try {
+    await FileSystem!.copyAsync({ from: photoUri, to: destUri });
+  } catch (err: unknown) {
+    console.error('Error copiando imagen al directorio:', err);
+    throw err;
+  }
   return destUri;
 }
 
@@ -179,7 +192,7 @@ export async function clearCheckIns(): Promise<void> {
 // THRESHOLD
 export async function getThreshold(): Promise<number> {
   try {
-    const val = await secureGetItem('@geo_face_threshold');
+    const val = await secureGetItem('geo_face_threshold');
     return val ? parseInt(val, 10) : 75;
   } catch {
     return 75;
@@ -188,7 +201,7 @@ export async function getThreshold(): Promise<number> {
 
 export async function saveThreshold(threshold: number): Promise<void> {
   try {
-    await secureSetItem('@geo_face_threshold', threshold.toString());
+    await secureSetItem('geo_face_threshold', threshold.toString());
   } catch {
     // ignore
   }

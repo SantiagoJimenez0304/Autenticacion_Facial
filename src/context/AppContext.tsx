@@ -26,7 +26,7 @@ interface AppContextType {
   isLoading: boolean;
   
   // Actions
-  addProfile: (name: string, photoUri?: string) => Promise<FaceProfile>;
+  addProfile: (id: string, name: string, photoUri?: string) => Promise<FaceProfile>;
   updateProfilePhoto: (id: string, photoUri: string) => Promise<void>;
   deleteProfile: (id: string) => Promise<void>;
   addZone: (name: string, latitude: number, longitude: number, radius: number) => Promise<Zone>;
@@ -80,8 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Profile operations
-  const addProfile = useCallback(async (name: string, photoUri?: string) => {
-    const id = Date.now().toString();
+  const addProfile = useCallback(async (id: string, name: string, photoUri?: string) => {
     const newProfile: FaceProfile = {
       id,
       name,
@@ -105,8 +104,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const embedding = await getEmbedding(localPhotoUri);
           newProfile.faceDescriptor = embedding || null;
         }
-      } catch (err: any) {
-        console.error('Error al procesar foto facial:', err?.message || err);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Error al procesar foto facial:', msg);
       }
     }
 
@@ -125,33 +125,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (serverOnline) {
           faceDescriptor = await getEmbedding(localPhotoUri);
         }
-      } catch (err: any) {
-        console.error('Error al obtener embedding facial:', err?.message || err);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Error al obtener embedding facial:', msg);
       }
 
-      setProfiles((prev) =>
-        prev.map((p) => {
-          if (p.id === id) {
-            const updated = {
-              ...p,
-              photoUris: [localPhotoUri],
-              faceDescriptor,
-              updatedAt: new Date().toISOString(),
-            };
-            storageSaveProfile(updated);
-            return updated;
-          }
-          return p;
-        })
-      );
+      setProfiles((prev) => {
+        const next = [...prev];
+        const idx = next.findIndex(p => p.id === id);
+        if (idx !== -1) {
+          next[idx] = {
+            ...next[idx],
+            photoUris: [localPhotoUri],
+            faceDescriptor,
+            updatedAt: new Date().toISOString(),
+          };
+          storageSaveProfile(next[idx]).catch(e => console.error('Error guardando perfil:', e));
+        }
+        return next;
+      });
     } catch (err) {
       console.error('Error al actualizar la foto de perfil:', err);
     }
   }, []);
 
   const deleteProfile = useCallback(async (id: string) => {
-    await storageDeleteProfile(id);
-    setProfiles((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await storageDeleteProfile(id);
+      setProfiles((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      console.error('Error borrando perfil:', e);
+    }
   }, []);
 
   // Zone operations
@@ -162,14 +166,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       center: { latitude, longitude },
       radius,
     };
-    await storageSaveZone(newZone);
-    setZones((prev) => [...prev, newZone]);
-    return newZone;
+    try {
+      await storageSaveZone(newZone);
+      setZones((prev) => [...prev, newZone]);
+      return newZone;
+    } catch (e) {
+      console.error('Error guardando zona:', e);
+      throw e;
+    }
   }, []);
 
   const deleteZone = useCallback(async (id: string) => {
-    await storageDeleteZone(id);
-    setZones((prev) => prev.filter((z) => z.id !== id));
+    try {
+      await storageDeleteZone(id);
+      setZones((prev) => prev.filter((z) => z.id !== id));
+    } catch (e) {
+      console.error('Error borrando zona:', e);
+    }
   }, []);
 
   // Check-in operations
@@ -179,13 +192,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
     };
-    await storageAddCheckIn(newCheckIn);
-    setCheckIns((prev) => [newCheckIn, ...prev.slice(0, 99)]);
+    try {
+      await storageAddCheckIn(newCheckIn);
+      setCheckIns((prev) => [newCheckIn, ...prev.slice(0, 99)]);
+    } catch (e) {
+      console.error('Error guardando check-in:', e);
+    }
   }, []);
 
   const clearCheckIns = useCallback(async () => {
-    await storageClearCheckIns();
-    setCheckIns([]);
+    try {
+      await storageClearCheckIns();
+      setCheckIns([]);
+    } catch (e) {
+      console.error('Error limpiando check-ins:', e);
+    }
   }, []);
 
   // Threshold operations

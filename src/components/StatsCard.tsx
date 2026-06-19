@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../styles/index.styles';
@@ -9,7 +10,7 @@ interface StatsCardProps {
   label: string;
 }
 
-export default function StatsCard({ icon, iconColor, value, label }: StatsCardProps) {
+export default memo(function StatsCard({ icon, iconColor, value, label }: StatsCardProps) {
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIconContainer, { borderColor: iconColor + '30', backgroundColor: iconColor + '15' }]}>
@@ -19,4 +20,4 @@ export default function StatsCard({ icon, iconColor, value, label }: StatsCardPr
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
-}
+});

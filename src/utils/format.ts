@@ -39,7 +39,9 @@ export function formatCheckInDate(iso: string): string {
 }
 
 export function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+  const timestamp = new Date(iso).getTime();
+  if (isNaN(timestamp)) return 'Fecha inválida';
+  const diff = Date.now() - timestamp;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'ahora';
   if (mins < 60) return `hace ${mins}m`;

@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
@@ -17,7 +18,7 @@ interface ProfileCardProps {
   onDelete: (id: string, name: string) => void;
 }
 
-export default function ProfileCard({ profile, onUpdatePhoto, onDelete }: ProfileCardProps) {
+export default memo(function ProfileCard({ profile, onUpdatePhoto, onDelete }: ProfileCardProps) {
   const avatarColor = getAvatarColor(profile.id);
   const hasPhoto = profile.photoUris && profile.photoUris.length > 0;
 
@@ -59,4 +60,4 @@ export default function ProfileCard({ profile, onUpdatePhoto, onDelete }: Profil
       </View>
     </View>
   );
-}
+});

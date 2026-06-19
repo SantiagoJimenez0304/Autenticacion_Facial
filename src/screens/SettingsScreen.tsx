@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
+import { useAuth } from '../context/AuthContext';
 import {
   View,
   Text,
@@ -12,14 +13,102 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { showAlert } from '../utils/alert';
 import { useApp } from '../context/AppContext';
-import { COLORS } from '../constants';
+import { COLORS, SPACING, BORDER_RADIUS } from '../constants';
 import { styles } from '../styles/settings.styles';
+import type { Zone, UserAccount } from '../types';
 
 // FileSystem solo disponible en nativo
 let FileSystem: typeof import('expo-file-system/legacy') | null = null;
 if (Platform.OS !== 'web') {
   FileSystem = require('expo-file-system/legacy');
 }
+
+const ZoneItem = memo(({ zone, onDelete }: { zone: Zone, onDelete: (id: string, name: string) => void }) => (
+  <View style={styles.zoneCard}>
+    <View style={styles.zoneInfo}>
+      <Text style={styles.zoneName}>{zone.name}</Text>
+      <View style={styles.zoneCoords}>
+        <Ionicons name="navigate-outline" size={12} color={COLORS.textMuted} />
+        <Text style={styles.zoneCoordsText}>
+          {zone.center.latitude.toFixed(6)}, {zone.center.longitude.toFixed(6)}
+        </Text>
+      </View>
+      <View style={styles.zoneRadiusBadge}>
+        <Text style={styles.zoneRadiusText}>{zone.radius}m radio</Text>
+      </View>
+    </View>
+    <View style={styles.zoneActions}>
+      <TouchableOpacity
+        style={styles.zoneActionBtnDanger}
+        accessibilityLabel={`Eliminar zona ${zone.name}`}
+        onPress={() => onDelete(zone.id, zone.name)}
+      >
+        <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+      </TouchableOpacity>
+    </View>
+  </View>
+));
+
+const AccountItem = memo(({ account, currentUser, onDelete }: { account: UserAccount, currentUser: UserAccount | null, onDelete: (id: string, name: string) => void }) => (
+  <View
+    style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: COLORS.card,
+      borderRadius: BORDER_RADIUS.lg,
+      borderWidth: 1,
+      borderColor: COLORS.cardBorder,
+      padding: SPACING.md,
+      marginBottom: 10,
+    }}
+  >
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 4 }}>
+        {account.displayName}
+      </Text>
+      <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+        @{account.username}
+      </Text>
+    </View>
+
+    <View
+      style={{
+        backgroundColor: account.role === 'admin' ? 'rgba(108, 92, 231, 0.15)' : 'rgba(0, 206, 201, 0.15)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: BORDER_RADIUS.sm,
+        marginRight: SPACING.sm,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 11,
+          fontWeight: '600',
+          color: account.role === 'admin' ? COLORS.primaryLight : COLORS.accent,
+        }}
+      >
+        {account.role === 'admin' ? 'Admin' : 'Usuario'}
+      </Text>
+    </View>
+
+    {account.id !== currentUser?.id && (
+      <TouchableOpacity
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: 'rgba(255, 118, 117, 0.1)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+        accessibilityLabel={`Eliminar usuario ${account.displayName}`}
+        onPress={() => onDelete(account.id, account.displayName)}
+      >
+        <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+      </TouchableOpacity>
+    )}
+  </View>
+));
 export default function SettingsScreen() {
   const {
     zones,
@@ -32,15 +121,23 @@ export default function SettingsScreen() {
     locationState,
   } = useApp();
 
+  const { currentUser, accounts, createAccount, deleteAccount, logout, refreshAccounts } = useAuth();
+
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [zoneName, setZoneName] = useState('');
   const [zoneLat, setZoneLat] = useState('');
   const [zoneLng, setZoneLng] = useState('');
   const [zoneRadius, setZoneRadius] = useState('100');
 
+  const [userModalVisible, setUserModalVisible] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserUsername, setNewUserUsername] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+
   const { currentLocation } = locationState;
 
-  const handleDeleteZone = (id: string, name: string) => {
+  const handleDeleteZone = useCallback((id: string, name: string) => {
     showAlert(
       'Eliminar Zona',
       `¿Estás seguro de eliminar la zona "${name}"?`,
@@ -59,7 +156,7 @@ export default function SettingsScreen() {
         },
       ]
     );
-  };
+  }, [deleteZone]);
 
   const handleUseCurrentLocation = () => {
     if (currentLocation) {
@@ -172,6 +269,52 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleDeleteAccount = useCallback((id: string, displayName: string) => {
+    showAlert(
+      'Eliminar Usuario',
+      `¿Estás seguro de eliminar al usuario "${displayName}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount(id);
+              await refreshAccounts();
+            } catch (err) {
+              showAlert('Error', 'No se pudo eliminar el usuario.');
+            }
+          },
+        },
+      ]
+    );
+  }, [deleteAccount, refreshAccounts]);
+
+  const handleCreateAccount = async () => {
+    if (!newUserName.trim() || !newUserUsername.trim() || !newUserPassword.trim()) {
+      showAlert('Datos inválidos', 'Por favor llena todos los campos.');
+      return;
+    }
+
+    try {
+      const result = await createAccount(newUserUsername.trim(), newUserPassword, newUserRole, newUserName.trim());
+      if (result.success) {
+        setNewUserName('');
+        setNewUserUsername('');
+        setNewUserPassword('');
+        setNewUserRole('user');
+        setUserModalVisible(false);
+        await refreshAccounts();
+        showAlert('Listo', 'Nuevo usuario creado correctamente.');
+      } else {
+        showAlert('Error', result.error || 'No se pudo crear el usuario.');
+      }
+    } catch (err) {
+      showAlert('Error', 'No se pudo crear el usuario.');
+    }
+  };
+
   const adjustThreshold = (delta: number) => {
     setThreshold(threshold + delta);
   };
@@ -194,135 +337,156 @@ export default function SettingsScreen() {
         </View>
 
         {/* Section: Zones */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="location" size={18} color={COLORS.accent} />
+        {currentUser?.role === 'admin' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="location" size={18} color={COLORS.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Zonas de Verificación (Geocercas)</Text>
             </View>
-            <Text style={styles.sectionTitle}>Zonas de Verificación (Geocercas)</Text>
+
+            {zones.map((zone) => (
+              <ZoneItem key={zone.id} zone={zone} onDelete={handleDeleteZone} />
+            ))}
+
+            <TouchableOpacity style={styles.addZoneBtn} accessibilityLabel="Agregar zona" onPress={() => setAddModalVisible(true)} activeOpacity={0.8}>
+              <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.addZoneBtnText}>Agregar Zona</Text>
+            </TouchableOpacity>
           </View>
-
-          {zones.map((zone) => (
-            <View key={zone.id} style={styles.zoneCard}>
-              <View style={styles.zoneInfo}>
-                <Text style={styles.zoneName}>{zone.name}</Text>
-                <View style={styles.zoneCoords}>
-                  <Ionicons name="navigate-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.zoneCoordsText}>
-                    {zone.center.latitude.toFixed(6)}, {zone.center.longitude.toFixed(6)}
-                  </Text>
-                </View>
-                <View style={styles.zoneRadiusBadge}>
-                  <Text style={styles.zoneRadiusText}>{zone.radius}m radio</Text>
-                </View>
-              </View>
-              <View style={styles.zoneActions}>
-                <TouchableOpacity
-                  style={styles.zoneActionBtnDanger}
-                  onPress={() => handleDeleteZone(zone.id, zone.name)}
-                >
-                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-
-          <TouchableOpacity style={styles.addZoneBtn} onPress={() => setAddModalVisible(true)} activeOpacity={0.8}>
-            <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.addZoneBtnText}>Agregar Zona</Text>
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* Section: Facial Recognition */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="scan" size={18} color={COLORS.primaryLight} />
-            </View>
-            <Text style={styles.sectionTitle}>Reconocimiento Facial</Text>
-          </View>
-
-          <View style={styles.thresholdCard}>
-            <View style={styles.thresholdHeader}>
-              <Text style={styles.thresholdLabel}>Umbral de coincidencia</Text>
-              <Text style={styles.thresholdValue}>{threshold}%</Text>
-            </View>
-            <Text style={styles.thresholdDesc}>
-              Confianza mínima requerida para considerar una verificación facial exitosa.
-            </Text>
-
-            {/* Visual slider */}
-            <View style={styles.sliderContainer}>
-              <TouchableOpacity
-                style={styles.sliderBtn}
-                onPress={() => adjustThreshold(-5)}
-              >
-                <Ionicons name="remove" size={20} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-              <View style={styles.sliderTrack}>
-                <View
-                  style={[
-                    styles.sliderFill,
-                    { width: `${((threshold - 50) / 49) * 100}%` },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.sliderThumb,
-                    { left: `${((threshold - 50) / 49) * 100}%` },
-                  ]}
-                />
+        {currentUser?.role === 'admin' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="scan" size={18} color={COLORS.primaryLight} />
               </View>
-              <TouchableOpacity
-                style={styles.sliderBtn}
-                onPress={() => adjustThreshold(5)}
-              >
-                <Ionicons name="add" size={20} color={COLORS.textSecondary} />
-              </TouchableOpacity>
+              <Text style={styles.sectionTitle}>Reconocimiento Facial</Text>
             </View>
 
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabelText}>50%</Text>
-              <Text style={styles.sliderLabelText}>99%</Text>
+            <View style={styles.thresholdCard}>
+              <View style={styles.thresholdHeader}>
+                <Text style={styles.thresholdLabel}>Umbral de coincidencia</Text>
+                <Text style={styles.thresholdValue}>{threshold}%</Text>
+              </View>
+              <Text style={styles.thresholdDesc}>
+                Confianza mínima requerida para considerar una verificación facial exitosa.
+              </Text>
+
+              {/* Visual slider */}
+              <View style={styles.sliderContainer}>
+                <TouchableOpacity
+                  style={styles.sliderBtn}
+                  onPress={() => adjustThreshold(-5)}
+                >
+                  <Ionicons name="remove" size={20} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+                <View style={styles.sliderTrack}>
+                  <View
+                    style={[
+                      styles.sliderFill,
+                      { width: `${((threshold - 50) / 49) * 100}%` },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.sliderThumb,
+                      { left: `${((threshold - 50) / 49) * 100}%` },
+                    ]}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.sliderBtn}
+                  onPress={() => adjustThreshold(5)}
+                >
+                  <Ionicons name="add" size={20} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.sliderLabels}>
+                <Text style={styles.sliderLabelText}>50%</Text>
+                <Text style={styles.sliderLabelText}>99%</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
+
+        {/* Section: User Management (Admin only) */}
+        {currentUser?.role === 'admin' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="people-outline" size={18} color={COLORS.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Gestión de Usuarios</Text>
+            </View>
+
+            {accounts.map((account) => (
+              <AccountItem key={account.id} account={account} currentUser={currentUser} onDelete={handleDeleteAccount} />
+            ))}
+
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 14,
+                borderRadius: 14,
+                borderWidth: 1.5,
+                borderColor: COLORS.cardBorder,
+                borderStyle: 'dashed',
+                gap: 8,
+                marginTop: 4,
+              }}
+              onPress={() => setUserModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="person-add-outline" size={20} color={COLORS.primary} />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.primary }}>Agregar Usuario</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Section: Data */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="server-outline" size={18} color={COLORS.info} />
+        {currentUser?.role === 'admin' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="server-outline" size={18} color={COLORS.info} />
+              </View>
+              <Text style={styles.sectionTitle}>Datos</Text>
             </View>
-            <Text style={styles.sectionTitle}>Datos</Text>
+
+            <TouchableOpacity style={styles.dataButton} onPress={handleExport}>
+              <View style={styles.dataButtonLeft}>
+                <View style={[styles.dataIcon, { backgroundColor: 'rgba(0, 184, 148, 0.1)' }]}>
+                  <Ionicons name="download-outline" size={20} color={COLORS.success} />
+                </View>
+                <View>
+                  <Text style={styles.dataButtonText}>Exportar Check-ins</Text>
+                  <Text style={styles.dataButtonDesc}>Descargar historial en CSV</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dataButton} onPress={handleClearHistory}>
+              <View style={styles.dataButtonLeft}>
+                <View style={[styles.dataIcon, { backgroundColor: 'rgba(255, 118, 117, 0.1)' }]}>
+                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                </View>
+                <View>
+                  <Text style={styles.dataButtonText}>Limpiar Historial</Text>
+                  <Text style={styles.dataButtonDesc}>Eliminar todos los registros locales</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.dataButton} onPress={handleExport}>
-            <View style={styles.dataButtonLeft}>
-              <View style={[styles.dataIcon, { backgroundColor: 'rgba(0, 184, 148, 0.1)' }]}>
-                <Ionicons name="download-outline" size={20} color={COLORS.success} />
-              </View>
-              <View>
-                <Text style={styles.dataButtonText}>Exportar Check-ins</Text>
-                <Text style={styles.dataButtonDesc}>Descargar historial en CSV</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.dataButton} onPress={handleClearHistory}>
-            <View style={styles.dataButtonLeft}>
-              <View style={[styles.dataIcon, { backgroundColor: 'rgba(255, 118, 117, 0.1)' }]}>
-                <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-              </View>
-              <View>
-                <Text style={styles.dataButtonText}>Limpiar Historial</Text>
-                <Text style={styles.dataButtonDesc}>Eliminar todos los registros locales</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* Section: About */}
         <View style={styles.section}>
@@ -358,6 +522,39 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+
+        {/* Section: Logout */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 118, 117, 0.1)',
+            borderRadius: BORDER_RADIUS.lg,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 118, 117, 0.25)',
+            padding: SPACING.md,
+            marginBottom: SPACING.sm,
+            gap: 10,
+          }}
+          onPress={logout}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="log-out-outline" size={22} color={COLORS.danger} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.danger }}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+        {currentUser?.displayName && (
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: 12,
+              color: COLORS.textMuted,
+              marginBottom: SPACING.lg,
+            }}
+          >
+            Conectado como: {currentUser.displayName}
+          </Text>
+        )}
       </ScrollView>
 
       {/* Add Zone Modal */}
@@ -458,6 +655,143 @@ export default function SettingsScreen() {
                 disabled={!zoneName.trim() || !zoneLat || !zoneLng || !zoneRadius}
               >
                 <Text style={styles.modalConfirmText}>Agregar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Add User Modal */}
+      <Modal
+        visible={userModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setUserModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setUserModalVisible(false)}
+          />
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Nuevo Usuario</Text>
+            <Text style={styles.modalSubtitle}>
+              Crea una nueva cuenta de acceso al sistema.
+            </Text>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={20} color={COLORS.textMuted} />
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre completo"
+                placeholderTextColor={COLORS.textMuted}
+                value={newUserName}
+                onChangeText={setNewUserName}
+                autoFocus
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="at-outline" size={20} color={COLORS.textMuted} />
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre de usuario"
+                placeholderTextColor={COLORS.textMuted}
+                value={newUserUsername}
+                onChangeText={setNewUserUsername}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={20} color={COLORS.textMuted} />
+              <TextInput
+                style={styles.input}
+                placeholder="Contraseña"
+                placeholderTextColor={COLORS.textMuted}
+                value={newUserPassword}
+                onChangeText={setNewUserPassword}
+                secureTextEntry
+              />
+            </View>
+
+            {/* Role selector */}
+            <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: SPACING.sm, fontWeight: '600' }}>
+              Rol del usuario
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: SPACING.lg }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: BORDER_RADIUS.md,
+                  backgroundColor: newUserRole === 'admin' ? 'rgba(108, 92, 231, 0.2)' : COLORS.surfaceLight,
+                  borderWidth: 1.5,
+                  borderColor: newUserRole === 'admin' ? COLORS.primary : COLORS.glassBorder,
+                  alignItems: 'center',
+                }}
+                onPress={() => setNewUserRole('admin')}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: newUserRole === 'admin' ? COLORS.primaryLight : COLORS.textMuted,
+                  }}
+                >
+                  Administrador
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: BORDER_RADIUS.md,
+                  backgroundColor: newUserRole === 'user' ? 'rgba(0, 206, 201, 0.2)' : COLORS.surfaceLight,
+                  borderWidth: 1.5,
+                  borderColor: newUserRole === 'user' ? COLORS.accent : COLORS.glassBorder,
+                  alignItems: 'center',
+                }}
+                onPress={() => setNewUserRole('user')}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: newUserRole === 'user' ? COLORS.accent : COLORS.textMuted,
+                  }}
+                >
+                  Usuario
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setNewUserName('');
+                  setNewUserUsername('');
+                  setNewUserPassword('');
+                  setNewUserRole('user');
+                  setUserModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, (!newUserName.trim() || !newUserUsername.trim() || !newUserPassword.trim()) && { opacity: 0.4 }]}
+                onPress={handleCreateAccount}
+                disabled={!newUserName.trim() || !newUserUsername.trim() || !newUserPassword.trim()}
+              >
+                <Text style={styles.modalConfirmText}>Crear</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Animated,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -13,6 +14,7 @@ import { COLORS } from '../constants';
 import { styles } from '../styles/verify.styles';
 import { verifyFace, FaceApiError, healthCheck } from '../services/faceApi';
 import ResultOverlay from '../components/ResultOverlay';
+import { EXPECTED_EMBEDDING_DIM } from '../utils/face';
 
 type VerifyResult = {
   match: boolean;
@@ -31,7 +33,7 @@ type ErrorBanner = {
 
 export default function VerifyScreen() {
   const router = useRouter();
-  const cameraRef = useRef<any>(null);
+  const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [isBackCamera, setIsBackCamera] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -54,11 +56,9 @@ export default function VerifyScreen() {
     distanceToZone,
   } = locationState;
 
-  const EXPECTED_EMBEDDING_DIM = 512;
-
-  const verifiableProfiles = profiles.filter(
+  const verifiableProfiles = useMemo(() => profiles.filter(
     (p) => p.faceDescriptor && p.faceDescriptor.length === EXPECTED_EMBEDDING_DIM
-  );
+  ), [profiles]);
 
   // Animar el banner de error al mostrarlo/ocultarlo
   useEffect(() => {
@@ -197,7 +197,9 @@ export default function VerifyScreen() {
     setCameraFlash((prev) => (prev === 'off' ? 'on' : 'off'));
   };
 
-  if (!permission) {
+  const hasPermission = Platform.OS === 'web' ? true : permission?.granted;
+
+  if (!permission && Platform.OS !== 'web') {
     return (
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
@@ -207,7 +209,7 @@ export default function VerifyScreen() {
     );
   }
 
-  if (!permission.granted) {
+  if (!hasPermission) {
     return (
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
@@ -218,7 +220,7 @@ export default function VerifyScreen() {
           <Text style={styles.permissionText}>
             Necesitamos acceso a tu cámara para realizar el reconocimiento facial y verificar la identidad.
           </Text>
-          <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+          <TouchableOpacity style={styles.permissionBtn} accessibilityLabel="Permitir acceso a la cámara" onPress={requestPermission}>
             <Text style={styles.permissionBtnText}>Permitir Acceso</Text>
           </TouchableOpacity>
         </View>
@@ -250,6 +252,7 @@ export default function VerifyScreen() {
           )}
           <TouchableOpacity
             style={[styles.permissionBtn, { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.glassBorder }]}
+            accessibilityLabel="Ir al Dashboard"
             onPress={() => router.push('/(tabs)')}
           >
             <Text style={[styles.permissionBtnText, { color: COLORS.textSecondary }]}>Ir al Dashboard</Text>
@@ -275,7 +278,7 @@ export default function VerifyScreen() {
               ? 'Debes agregar al menos una persona en la pestaña de Perfiles.'
               : 'Ningún perfil tiene registro facial. Asegúrate de que el servidor DeepFace esté encendido y vuelve a tomar la foto del perfil.'}
           </Text>
-          <TouchableOpacity style={styles.permissionBtn} onPress={() => router.push('/(tabs)/profiles')}>
+          <TouchableOpacity style={styles.permissionBtn} accessibilityLabel="Ir a Perfiles" onPress={() => router.push('/(tabs)/profiles')}>
             <Text style={styles.permissionBtnText}>Ir a Perfiles</Text>
           </TouchableOpacity>
         </View>
@@ -357,6 +360,7 @@ export default function VerifyScreen() {
             </Text>
             <TouchableOpacity
               style={[styles.errorBannerRetryBtn, { backgroundColor: errorBanner.color }]}
+              accessibilityLabel="Reintentar verificación"
               onPress={dismissError}
               activeOpacity={0.8}
             >
@@ -369,7 +373,7 @@ export default function VerifyScreen() {
 
       <View style={styles.bottomControls}>
         <View style={styles.controlsRow}>
-          <TouchableOpacity style={styles.sideButton} onPress={toggleFlash}>
+          <TouchableOpacity style={styles.sideButton} accessibilityLabel="Alternar flash de la cámara" onPress={toggleFlash}>
             <Ionicons
               name={cameraFlash === 'on' ? 'flash' : 'flash-outline'}
               size={24}
@@ -379,6 +383,7 @@ export default function VerifyScreen() {
 
           <TouchableOpacity
             style={styles.captureButton}
+            accessibilityLabel="Capturar foto para verificar identidad"
             onPress={handleCapture}
             disabled={isCapturing || !!errorBanner}
             activeOpacity={0.7}
@@ -396,6 +401,7 @@ export default function VerifyScreen() {
 
           <TouchableOpacity
             style={styles.sideButton}
+            accessibilityLabel="Alternar cámara frontal y trasera"
             onPress={() => setIsBackCamera(!isBackCamera)}
           >
             <Ionicons name="camera-reverse-outline" size={24} color={COLORS.textSecondary} />

@@ -57,3 +57,22 @@ export interface AppState {
   checkIns: CheckIn[];
   selectedProfile: FaceProfile | null;
 }
+
+// Authentication types
+export type UserRole = 'admin' | 'user';
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: UserRole;
+  displayName: string;
+  createdAt: string;
+}
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  currentUser: UserAccount | null;
+  isFirstRun: boolean;
+}
+

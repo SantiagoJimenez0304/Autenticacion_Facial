@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Importar FileSystem solo en plataformas nativas (no disponible en web)
 let FileSystem: typeof import('expo-file-system/legacy') | null = null;
@@ -27,6 +28,26 @@ export function setServerAddress(hostname: string, port?: number) {
 
 export function getServerAddress(): string {
   return API_BASE;
+}
+
+export async function loadServerAddress(): Promise<void> {
+  try {
+    const ip = await AsyncStorage.getItem('@server_ip');
+    if (ip) {
+      setServerAddress(ip);
+    }
+  } catch (error) {
+    console.error('Failed to load server IP:', error);
+  }
+}
+
+export async function saveAndSetServerAddress(hostname: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem('@server_ip', hostname);
+    setServerAddress(hostname);
+  } catch (error) {
+    console.error('Failed to save server IP:', error);
+  }
 }
 
 export class FaceApiError extends Error {
