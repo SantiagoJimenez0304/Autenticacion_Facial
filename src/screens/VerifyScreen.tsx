@@ -13,6 +13,7 @@ import { useApp } from '../context/AppContext';
 import { COLORS } from '../constants';
 import { styles } from '../styles/verify.styles';
 import { verifyFace, FaceApiError, healthCheck } from '../services/faceApi';
+import { useAuth } from '../context/AuthContext';
 import ResultOverlay from '../components/ResultOverlay';
 import { EXPECTED_EMBEDDING_DIM } from '../utils/face';
 
@@ -42,6 +43,7 @@ export default function VerifyScreen() {
   const [errorBanner, setErrorBanner] = useState<ErrorBanner>(null);
   const bannerAnim = useRef(new Animated.Value(0)).current;
 
+  const { currentUser } = useAuth();
   const {
     profiles,
     locationState,
@@ -57,8 +59,8 @@ export default function VerifyScreen() {
   } = locationState;
 
   const verifiableProfiles = useMemo(() => profiles.filter(
-    (p) => p.faceDescriptor && p.faceDescriptor.length === EXPECTED_EMBEDDING_DIM
-  ), [profiles]);
+    (p) => p.id === currentUser?.id && p.faceDescriptor && p.faceDescriptor.length === EXPECTED_EMBEDDING_DIM
+  ), [profiles, currentUser]);
 
   // Animar el banner de error al mostrarlo/ocultarlo
   useEffect(() => {
