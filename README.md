@@ -72,15 +72,5 @@ npx expo start
 2. En la pantalla de inicio de sesión de la aplicación, toca el icono de **"Servidor"** ⚙️ en la esquina superior derecha.
 3. Ingresa la **Dirección IP local** de tu computadora (ej. `192.168.1.50`) para enlazar el celular con tu base de datos de Docker.
 
----
 
-## 🔒 Consideraciones de Seguridad para Producción
-Este repositorio viene saneado por defecto, pero si planeas salir a un entorno corporativo real:
-- **No utilices** contraseñas por defecto. Modifica tu `.env`.
-- Implementa certificados **SSL/HTTPS** utilizando un proxy inverso (como NGINX o Traefik) delante del contenedor de FastAPI para cifrar las fotografías biométricas en tránsito.
-- El sistema cuenta con **Rate Limiting** para bloquear ataques de fuerza bruta en el panel de administrador.
 
----
-
-## 📄 Licencia
-Este proyecto es de código abierto. Siéntete libre de clonarlo, modificarlo y adaptarlo a las necesidades de tu empresa.
