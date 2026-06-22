@@ -15,6 +15,7 @@ import { showAlert } from '../utils/alert';
 import { useApp } from '../context/AppContext';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants';
 import { styles } from '../styles/settings.styles';
+import { exportCheckInsToCSV } from '../utils/export';
 import type { Zone, UserAccount } from '../types';
 
 // FileSystem solo disponible en nativo
@@ -226,47 +227,7 @@ export default function SettingsScreen() {
       return;
     }
     
-    try {
-      let csvContent = 'ID,Persona,Zona,Resultado,Confianza,Latitud,Longitud,Fecha y Hora\n';
-      checkIns.forEach((item) => {
-        const row = [
-          item.id,
-          `"${item.profileName}"`,
-          `"${item.zone.name}"`,
-          item.verification.isMatch ? 'Exitoso' : 'Fallido',
-          `${Math.round(item.verification.confidence * 100)}%`,
-          item.location.latitude,
-          item.location.longitude,
-          item.timestamp,
-        ].join(',');
-        csvContent += row + '\n';
-      });
-
-      if (Platform.OS === 'web') {
-        // En web: descargar como archivo usando Blob
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `check_ins_export_${Date.now()}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        showAlert('Exportación Exitosa', 'El archivo CSV se ha descargado en tu navegador.');
-      } else {
-        // En nativo: guardar en el sistema de archivos
-        const path = `${FileSystem!.documentDirectory}check_ins_export.csv`;
-        await FileSystem!.writeAsStringAsync(path, csvContent);
-        showAlert(
-          'Exportación Exitosa',
-          `Se ha guardado el archivo en tu dispositivo: ${path}`
-        );
-      }
-    } catch (err) {
-      showAlert('Error', 'No se pudo exportar el archivo CSV.');
-      console.error(err);
-    }
+    await exportCheckInsToCSV(checkIns);
   };
 
   const handleDeleteAccount = useCallback((id: string, displayName: string) => {

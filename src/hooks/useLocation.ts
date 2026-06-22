@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import { LatLng, Zone, LocationState } from '../types';
 import { requestLocationPermissions, watchLocation } from '../services/location';
 import { isPointInZone, findNearestZone } from '../utils/geo';
+import { sendLocalNotification } from '../services/notifications';
 
 export function useLocation(zones: Zone[]) {
   const [state, setState] = useState<LocationState>({
@@ -52,13 +53,23 @@ export function useLocation(zones: Zone[]) {
       const { zone, distance } = findNearestZone(location, currentZones);
       const inZone = zone ? isPointInZone(location, zone) : false;
 
-      setState({
-        currentLocation: location,
-        isInZone: inZone,
-        distanceToZone: distance,
-        nearestZone: zone,
-        isTracking: true,
-        error: null,
+      setState((prev) => {
+        // Disparar notificación si acaba de entrar a la zona
+        if (!prev.isInZone && inZone && zone) {
+          sendLocalNotification(
+            'Llegada a Zona',
+            `📍 Has llegado a: ${zone.name}. ¡No olvides registrar tu asistencia!`
+          ).catch((err) => console.log('Error enviando notificación', err));
+        }
+
+        return {
+          currentLocation: location,
+          isInZone: inZone,
+          distanceToZone: distance,
+          nearestZone: zone,
+          isTracking: true,
+          error: null,
+        };
       });
     },
     []

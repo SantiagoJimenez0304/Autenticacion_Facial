@@ -41,7 +41,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import { requestNotificationPermissions } from '../src/services/notifications';
+
 export default function RootLayout() {
+  useEffect(() => {
+    requestNotificationPermissions().catch(console.error);
+  }, []);
+
   return (
     <AuthProvider>
       <AppProvider>

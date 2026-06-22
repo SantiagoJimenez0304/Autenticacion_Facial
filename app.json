@@ -60,7 +60,8 @@
           "locationWhenInUsePermission": "La app necesita tu ubicación para verificar que estés en la zona designada."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": false

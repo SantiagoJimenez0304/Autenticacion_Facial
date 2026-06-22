@@ -9,9 +9,11 @@ import {
   View,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../constants';
 import { formatDistance } from '../utils/geo';
 import { formatCheckInDate } from '../utils/format';
+import { exportCheckInsToCSV } from '../utils/export';
 import { styles } from '../styles/index.styles';
 import StatsCard from '../components/StatsCard';
 import CheckInItem from '../components/CheckInItem';
@@ -61,6 +63,7 @@ const TrackingDot = memo(function TrackingDot({ isTracking }: { isTracking: bool
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const { isLoading, checkIns, locationState, startLocationTracking, stopLocationTracking } = useApp();
   const {
     currentLocation = null,
@@ -232,7 +235,18 @@ export default function DashboardScreen() {
 
         {/* Recent Check-ins */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Registros Recientes</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.sectionTitle}>Registros Recientes</Text>
+            {currentUser?.role === 'admin' && checkIns.length > 0 && (
+              <TouchableOpacity
+                onPress={() => exportCheckInsToCSV(checkIns)}
+                style={{ padding: 6, backgroundColor: 'rgba(0, 210, 255, 0.15)', borderRadius: 8, marginLeft: 4 }}
+                accessibilityLabel="Descargar Reporte Excel/CSV"
+              >
+                <Ionicons name="download-outline" size={18} color={COLORS.primaryLight} />
+              </TouchableOpacity>
+            )}
+          </View>
           <TouchableOpacity accessibilityLabel="Nuevo Registro" onPress={() => router.push('/(tabs)/verify')}>
             <Text style={styles.sectionAction}>Nuevo Registro</Text>
           </TouchableOpacity>
