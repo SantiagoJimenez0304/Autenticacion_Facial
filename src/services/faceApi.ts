@@ -57,38 +57,33 @@ export class FaceApiError extends Error {
   }
 }
 
-export interface VerifyMatch {
-  id: string;
-  distance: number;
-  confidence: number;
-}
-
 export interface VerifyResponse {
-  matches: VerifyMatch[];
-  best_match: VerifyMatch | null;
   verified: boolean;
-  threshold: number;
+  confidence: number;
+  distance: number;
+  threshold?: number;
 }
 
-export interface RepresentResponse {
-  embedding: number[];
-  facial_area?: { x: number; y: number; w: number; h: number };
-  face_confidence?: number;
-  model: string;
-  dimensions: number;
+export interface EnrollResponse {
+  status: string;
+  message: string;
 }
 
-async function request<T>(path: string, body: unknown, timeout = REQUEST_TIMEOUT): Promise<T> {
+async function request<T>(path: string, body: unknown = null, timeout = REQUEST_TIMEOUT, method = 'POST'): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
+    const fetchOptions: RequestInit = {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
       signal: controller.signal,
-    });
+    };
+    if (body !== null && method !== 'GET') {
+      fetchOptions.body = JSON.stringify(body);
+    }
+
+    const res = await fetch(`${API_BASE}${path}`, fetchOptions);
 
     const text = await res.text();
 
@@ -116,9 +111,9 @@ async function request<T>(path: string, body: unknown, timeout = REQUEST_TIMEOUT
     }
 
     return data;
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof FaceApiError) throw err;
-    if (err.name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       throw new FaceApiError('El servidor no respondió a tiempo. Revisa tu conexión.', 'TIMEOUT');
     }
     throw new FaceApiError(
@@ -155,31 +150,58 @@ async function photoToBase64(photoUri: string): Promise<string> {
   return `data:image/jpeg;base64,${base64}`;
 }
 
-export async function getEmbedding(photoUri: string): Promise<number[]> {
+export async function enrollFace(photoUri: string, userId: string, userName?: string): Promise<void> {
   const image = await photoToBase64(photoUri);
-  const result = await request<RepresentResponse>('/v1/represent', { image });
-  return result.embedding;
+  await request<unknown>('/v1/represent', { image, user_id: userId, user_name: userName });
 }
 
 export async function verifyFace(
   photoUri: string,
-  embeddings: { id: string; embedding: number[] }[]
+  userId: string,
+  zoneId?: string,
+  latitude?: number,
+  longitude?: number
 ): Promise<VerifyResponse> {
   const image = await photoToBase64(photoUri);
   return request<VerifyResponse>('/v1/verify', {
     image,
-    embeddings,
+    user_id: userId,
+    zone_id: zoneId || null,
+    latitude: latitude || 0.0,
+    longitude: longitude || 0.0
   });
 }
 
+export interface CheckInRecord {
+  id: number;
+  userId: string;
+  zoneId: string | null;
+  isMatch: boolean;
+  confidence: number;
+  timestamp: string | null;
+  location: { latitude: number; longitude: number };
+}
+
+export async function getCheckIns(userId: string): Promise<CheckInRecord[]> {
+  const response = await request<{check_ins: CheckInRecord[]}>(`/v1/check-ins/${userId}`, null, 10000, 'GET');
+  return response.check_ins;
+}
+
+export async function getAllCheckIns(): Promise<CheckInRecord[]> {
+  const response = await request<{check_ins: CheckInRecord[]}>('/v1/check-ins', null, 10000, 'GET');
+  return response.check_ins;
+}
+
 export async function healthCheck(): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
+    timer = setTimeout(() => controller.abort(), 5000);
     const res = await fetch(`${API_BASE}/v1/health`, { signal: controller.signal });
-    clearTimeout(timer);
     return res.ok;
   } catch {
     return false;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

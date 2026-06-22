@@ -15,7 +15,6 @@ import { styles } from '../styles/verify.styles';
 import { verifyFace, FaceApiError, healthCheck } from '../services/faceApi';
 import { useAuth } from '../context/AuthContext';
 import ResultOverlay from '../components/ResultOverlay';
-import { EXPECTED_EMBEDDING_DIM } from '../utils/face';
 
 type VerifyResult = {
   match: boolean;
@@ -58,8 +57,8 @@ export default function VerifyScreen() {
     distanceToZone,
   } = locationState;
 
-  const verifiableProfiles = useMemo(() => profiles.filter(
-    (p) => p.id === currentUser?.id && p.faceDescriptor && p.faceDescriptor.length === EXPECTED_EMBEDDING_DIM
+  const currentUserProfile = useMemo(() => profiles.find(
+    (p) => p.id === currentUser?.id
   ), [profiles, currentUser]);
 
   // Animar el banner de error al mostrarlo/ocultarlo
@@ -116,45 +115,43 @@ export default function VerifyScreen() {
         return;
       }
 
-      const profilesWithEmbeddings = verifiableProfiles.map((p) => ({
-        id: p.id,
-        embedding: p.faceDescriptor!,
-      }));
-
-      if (profilesWithEmbeddings.length === 0) {
+      if (!currentUser || !currentUserProfile) {
         setIsCapturing(false);
         showErrorBanner(
           'people-outline',
-          'Sin Referencias',
-          'Ningun perfil tiene un descriptor facial valido. Registra los perfiles de nuevo.',
+          'Usuario No Registrado',
+          'No se encontró tu perfil de usuario. Registra tu perfil en la pestaña Perfiles.',
           COLORS.info
         );
         return;
       }
 
-      const serverResult = await verifyFace(photo.uri, profilesWithEmbeddings);
+      const serverResult = await verifyFace(
+        photo.uri, 
+        currentUser.id, 
+        nearestZone?.id || '0', 
+        currentLocation?.latitude || 0, 
+        currentLocation?.longitude || 0
+      );
 
       setIsCapturing(false);
 
-      const bestMatch = serverResult.best_match;
-      const matchedProfile = profiles.find((p) => p.id === bestMatch?.id);
-      const confidence = bestMatch ? bestMatch.confidence : 0;
-      const isMatch = !!(bestMatch && serverResult.verified);
+      const confidence = serverResult.confidence || 0;
+      const isMatch = !!serverResult.verified;
+      const matchedProfile = isMatch ? currentUserProfile : undefined;
 
-      if (isMatch && matchedProfile) {
-        await addCheckIn({
-          profileId: matchedProfile.id,
-          profileName: matchedProfile.name,
-          zone: nearestZone || { id: '0', name: 'Desconocida', center: currentLocation || { latitude: 0, longitude: 0 }, radius: 100 },
-          verification: {
-            isMatch: true,
-            confidence: confidence / 100,
-            matchedProfile,
-            timestamp: new Date().toISOString(),
-          },
-          location: currentLocation || { latitude: 0, longitude: 0 },
-        });
-      }
+      await addCheckIn({
+        profileId: currentUserProfile.id,
+        profileName: currentUserProfile.name,
+        zone: nearestZone || { id: '0', name: 'Desconocida', center: currentLocation || { latitude: 0, longitude: 0 }, radius: 100 },
+        verification: {
+          isMatch,
+          confidence: confidence / 100,
+          matchedProfile: isMatch && currentUserProfile ? currentUserProfile : null,
+          timestamp: new Date().toISOString(),
+        },
+        location: currentLocation || { latitude: 0, longitude: 0 },
+      });
 
       setResult({
         match: isMatch,
@@ -164,7 +161,7 @@ export default function VerifyScreen() {
         selfieUri: photo.uri,
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       setIsCapturing(false);
       const msg = error instanceof FaceApiError ? error.message : '';
 
@@ -264,7 +261,7 @@ export default function VerifyScreen() {
     );
   }
 
-  if (profiles.length === 0 || verifiableProfiles.length === 0) {
+  if (profiles.length === 0 || !currentUserProfile) {
     return (
       <View style={styles.container}>
         <View style={styles.bgCircle1} />
@@ -273,12 +270,12 @@ export default function VerifyScreen() {
             <Ionicons name="people-outline" size={64} color={COLORS.primary} />
           </View>
           <Text style={styles.permissionTitle}>
-            {profiles.length === 0 ? 'Sin Perfiles Registrados' : 'Perfiles Sin Registro Facial'}
+            {profiles.length === 0 ? 'Sin Perfiles Registrados' : 'Usuario Sin Perfil'}
           </Text>
           <Text style={styles.permissionText}>
             {profiles.length === 0
               ? 'Debes agregar al menos una persona en la pestaña de Perfiles.'
-              : 'Ningún perfil tiene registro facial. Asegúrate de que el servidor DeepFace esté encendido y vuelve a tomar la foto del perfil.'}
+              : 'Tu usuario actual no tiene un perfil registrado. Crea uno en la pestaña de Perfiles.'}
           </Text>
           <TouchableOpacity style={styles.permissionBtn} accessibilityLabel="Ir a Perfiles" onPress={() => router.push('/(tabs)/profiles')}>
             <Text style={styles.permissionBtnText}>Ir a Perfiles</Text>
