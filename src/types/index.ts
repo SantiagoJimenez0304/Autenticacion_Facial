@@ -26,7 +26,6 @@ export interface FaceProfile {
   id: string;
   name: string;
   photoUris: string[]; // stored photo URIs
-  faceDescriptor: number[] | null; // 512D face embedding vector (Facenet512)
   createdAt: string;
   updatedAt: string;
 }
@@ -39,7 +38,7 @@ export interface VerificationResult {
 }
 
 export interface CheckIn {
-  id: string;
+  id: number;
   profileId: string;
   profileName: string;
   zone: Zone;

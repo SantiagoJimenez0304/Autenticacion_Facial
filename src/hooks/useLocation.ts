@@ -59,7 +59,7 @@ export function useLocation(zones: Zone[]) {
           sendLocalNotification(
             'Llegada a Zona',
             `📍 Has llegado a: ${zone.name}. ¡No olvides registrar tu asistencia!`
-          ).catch((err) => console.log('Error enviando notificación', err));
+          ).catch(() => {});
         }
 
         return {
