@@ -1,6 +1,18 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+
+async function getActiveSessionToken(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') {
+      return await AsyncStorage.getItem('geo_face_session');
+    }
+    return await SecureStore.getItemAsync('geo_face_session');
+  } catch {
+    return null;
+  }
+}
 
 // Importar FileSystem solo en plataformas nativas (no disponible en web)
 let FileSystem: typeof import('expo-file-system/legacy') | null = null;
@@ -8,22 +20,41 @@ if (Platform.OS !== 'web') {
   FileSystem = require('expo-file-system/legacy');
 }
 
-const SERVER_PORT = 5005;
+const SERVER_PORT = 8000;
 const REQUEST_TIMEOUT = 120000;
 
 function getServerHost(): string {
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const hostname = hostUri.split(':')[0];
-    return `http://${hostname}:${SERVER_PORT}`;
-  }
-  return `http://localhost:${SERVER_PORT}`;
+  // Dirección por defecto del portal de servicios en producción de Refridcol
+  return 'http://portalservicios.refridcol.com/api/v2';
 }
 
 let API_BASE = getServerHost();
 
-export function setServerAddress(hostname: string, port?: number) {
-  API_BASE = `http://${hostname}:${port || SERVER_PORT}`;
+export function setServerAddress(input: string) {
+  let address = input.trim();
+  if (!address.startsWith('http://') && !address.startsWith('https://')) {
+    address = `http://${address}`;
+  }
+  
+  // Si es una IP simple o localhost sin puerto, agregar el puerto por defecto (8000)
+  const cleanAddress = address.replace('://', '');
+  const hasPort = /:\d+/.test(cleanAddress);
+  
+  // Comprobar si la dirección IP (o host) contiene letras (es un dominio/túnel)
+  const hostPart = address.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+  const isDomain = /[a-zA-Z]/.test(hostPart);
+  
+  if (!hasPort && !isDomain) {
+    address = `${address}:${SERVER_PORT}`;
+  }
+  
+  // Asegurar que termina con /api/v2
+  if (!address.endsWith('/api/v2')) {
+    address = address.replace(/\/$/, '') + '/api/v2';
+  }
+  
+  API_BASE = address;
+  console.log('API_BASE configured to:', API_BASE);
 }
 
 export function getServerAddress(): string {
@@ -32,9 +63,9 @@ export function getServerAddress(): string {
 
 export async function loadServerAddress(): Promise<void> {
   try {
-    const ip = await AsyncStorage.getItem('@server_ip');
-    if (ip) {
-      setServerAddress(ip);
+    const savedIp = await AsyncStorage.getItem('@server_ip');
+    if (savedIp) {
+      setServerAddress(savedIp);
     }
   } catch (error) {
     console.error('Failed to load server IP:', error);
@@ -57,38 +88,39 @@ export class FaceApiError extends Error {
   }
 }
 
-export interface VerifyMatch {
-  id: string;
-  distance: number;
-  confidence: number;
-}
-
 export interface VerifyResponse {
-  matches: VerifyMatch[];
-  best_match: VerifyMatch | null;
   verified: boolean;
-  threshold: number;
+  confidence: number;
+  distance: number;
+  threshold?: number;
 }
 
-export interface RepresentResponse {
-  embedding: number[];
-  facial_area?: { x: number; y: number; w: number; h: number };
-  face_confidence?: number;
-  model: string;
-  dimensions: number;
+export interface EnrollResponse {
+  status: string;
+  message: string;
 }
 
-async function request<T>(path: string, body: unknown, timeout = REQUEST_TIMEOUT): Promise<T> {
+async function request<T>(path: string, body: unknown = null, timeout = REQUEST_TIMEOUT, method = 'POST'): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+    const token = await getActiveSessionToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers,
       signal: controller.signal,
-    });
+    };
+    if (body !== null && method !== 'GET') {
+      fetchOptions.body = JSON.stringify(body);
+    }
+
+    const res = await fetch(`${API_BASE}${path}`, fetchOptions);
 
     const text = await res.text();
 
@@ -116,9 +148,9 @@ async function request<T>(path: string, body: unknown, timeout = REQUEST_TIMEOUT
     }
 
     return data;
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof FaceApiError) throw err;
-    if (err.name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       throw new FaceApiError('El servidor no respondió a tiempo. Revisa tu conexión.', 'TIMEOUT');
     }
     throw new FaceApiError(
@@ -155,31 +187,46 @@ async function photoToBase64(photoUri: string): Promise<string> {
   return `data:image/jpeg;base64,${base64}`;
 }
 
-export async function getEmbedding(photoUri: string): Promise<number[]> {
+export async function enrollFace(photoUri: string, userId: string, userName?: string): Promise<void> {
   const image = await photoToBase64(photoUri);
-  const result = await request<RepresentResponse>('/v1/represent', { image });
-  return result.embedding;
+  await request<unknown>('/biometria/enrolar', { image, user_id: userId, user_name: userName });
 }
 
 export async function verifyFace(
   photoUri: string,
-  embeddings: { id: string; embedding: number[] }[]
+  userId: string,
+  zoneId?: string,
+  latitude?: number,
+  longitude?: number
 ): Promise<VerifyResponse> {
   const image = await photoToBase64(photoUri);
-  return request<VerifyResponse>('/v1/verify', {
+  return request<VerifyResponse>('/biometria/asistencia', {
     image,
-    embeddings,
+    user_id: userId,
+    zone_id: zoneId || null,
+    latitude: latitude || 0.0,
+    longitude: longitude || 0.0
   });
 }
 
+export async function getCheckIns(userId: string): Promise<any[]> {
+  return request<any[]>(`/biometria/asistencias?usuario_id=${userId}`, null, REQUEST_TIMEOUT, 'GET');
+}
+
+export async function getAllCheckIns(): Promise<any[]> {
+  return request<any[]>(`/biometria/asistencias`, null, REQUEST_TIMEOUT, 'GET');
+}
+
 export async function healthCheck(): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${API_BASE}/v1/health`, { signal: controller.signal });
-    clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${API_BASE}/health`, { signal: controller.signal });
     return res.ok;
   } catch {
     return false;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
