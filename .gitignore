@@ -66,3 +66,4 @@ face-server/.env
 graphify-out/
 .graphifyignore
 
+*.md
