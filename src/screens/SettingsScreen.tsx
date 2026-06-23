@@ -18,11 +18,7 @@ import { styles } from '../styles/settings.styles';
 import { exportCheckInsToCSV } from '../utils/export';
 import type { Zone, UserAccount } from '../types';
 
-// FileSystem solo disponible en nativo
-let FileSystem: typeof import('expo-file-system/legacy') | null = null;
-if (Platform.OS !== 'web') {
-  FileSystem = require('expo-file-system/legacy');
-}
+
 
 const ZoneItem = memo(({ zone, onDelete }: { zone: Zone, onDelete: (id: string, name: string) => void }) => (
   <View style={styles.zoneCard}>
@@ -202,7 +198,7 @@ export default function SettingsScreen() {
 
     showAlert(
       'Limpiar Historial',
-      '¿Estás seguro? Se eliminarán permanentemente todos los registros de check-in de la base de datos local.',
+      'Se eliminarán permanentemente todos los registros del sistema.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -441,7 +437,7 @@ export default function SettingsScreen() {
                 </View>
                 <View>
                   <Text style={styles.dataButtonText}>Limpiar Historial</Text>
-                  <Text style={styles.dataButtonDesc}>Eliminar todos los registros locales</Text>
+                  <Text style={styles.dataButtonDesc}>Borrar registros del historial</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />

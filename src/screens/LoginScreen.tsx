@@ -19,13 +19,11 @@ import { COLORS } from '../constants';
 import { styles } from '../styles/login.styles';
 
 export default function LoginScreen() {
-  const { login, createAccount, isFirstRun, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
 
   // Form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,78 +101,32 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     clearError();
 
-    if (isFirstRun) {
-      // ── First-run validation ──
-      if (!displayName.trim()) {
-        setError('Por favor ingresa tu nombre completo.');
-        return;
-      }
-      if (!username.trim()) {
-        setError('Por favor ingresa un nombre de usuario.');
-        return;
-      }
-      if (password.length < 4) {
-        setError('La contraseña debe tener al menos 4 caracteres.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Las contraseñas no coinciden.');
-        return;
-      }
+    // ── Normal login validation ──
+    if (!username.trim()) {
+      setError('Por favor ingresa tu cédula.');
+      return;
+    }
+    if (!password) {
+      setError('Por favor ingresa tu contraseña.');
+      return;
+    }
 
-      setSubmitting(true);
-      try {
-        const result = await createAccount(
-          username.trim(),
-          password,
-          'admin',
-          displayName.trim(),
-        );
-        if (!result.success) {
-          setError(result.error ?? 'No se pudo crear la cuenta.');
-          setSubmitting(false);
-          return;
-        }
-        // Auto-login after account creation
-        const loginResult = await login(username.trim(), password);
-        if (!loginResult.success) {
-          setError(loginResult.error ?? 'Cuenta creada, pero no se pudo iniciar sesión.');
-        }
-      } catch {
-        setError('Ocurrió un error inesperado. Inténtalo de nuevo.');
-      } finally {
-        setSubmitting(false);
+    setSubmitting(true);
+    try {
+      const result = await login(username.trim(), password);
+      if (!result.success) {
+        setError(result.error ?? 'Credenciales incorrectas.');
       }
-    } else {
-      // ── Normal login validation ──
-      if (!username.trim()) {
-        setError('Por favor ingresa tu nombre de usuario.');
-        return;
-      }
-      if (!password) {
-        setError('Por favor ingresa tu contraseña.');
-        return;
-      }
-
-      setSubmitting(true);
-      try {
-        const result = await login(username.trim(), password);
-        if (!result.success) {
-          setError(result.error ?? 'Credenciales incorrectas.');
-        }
-      } catch {
-        setError('Ocurrió un error inesperado. Inténtalo de nuevo.');
-      } finally {
-        setSubmitting(false);
-      }
+    } catch {
+      setError('Ocurrió un error inesperado. Inténtalo de nuevo.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const isBusy = submitting || isLoading;
 
-  const isFormValid = isFirstRun
-    ? displayName.trim() && username.trim() && password.length >= 4 && password === confirmPassword
-    : username.trim() && password;
+  const isFormValid = username.trim() && password;
 
   return (
     <View style={styles.container}>
@@ -204,12 +156,10 @@ export default function LoginScreen() {
                 <Ionicons name="shield-checkmark" size={64} color={COLORS.primary} />
               </View>
               <Text style={styles.title}>
-                {isFirstRun ? 'Configuración Inicial' : 'GeoFace'}
+                GeoFace
               </Text>
               <Text style={styles.subtitle}>
-                {isFirstRun
-                  ? 'Crea la cuenta de Administrador para comenzar'
-                  : 'Sistema de Asistencia Inteligente'}
+                Sistema de Asistencia Inteligente
               </Text>
             </View>
 
@@ -238,31 +188,6 @@ export default function LoginScreen() {
 
             {/* Form */}
             <View style={styles.formContainer}>
-              {/* Display name — first-run only */}
-              {isFirstRun && (
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    focusedField === 'displayName' && styles.inputWrapperFocused,
-                  ]}
-                >
-                  <View style={styles.inputIcon}>
-                    <Ionicons name="text-outline" size={20} color={COLORS.textMuted} />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Nombre completo"
-                    placeholderTextColor={COLORS.textMuted}
-                    value={displayName}
-                    onChangeText={(t) => { setDisplayName(t); clearError(); }}
-                    onFocus={() => setFocusedField('displayName')}
-                    onBlur={() => setFocusedField(null)}
-                    autoCapitalize="words"
-                    editable={!isBusy}
-                  />
-                </View>
-              )}
-
               {/* Username */}
               <View
                 style={[
@@ -275,7 +200,7 @@ export default function LoginScreen() {
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Nombre de usuario"
+                  placeholder="Cédula"
                   placeholderTextColor={COLORS.textMuted}
                   value={username}
                   onChangeText={(t) => { setUsername(t); clearError(); }}
@@ -309,31 +234,6 @@ export default function LoginScreen() {
                   editable={!isBusy}
                 />
               </View>
-
-              {/* Confirm password — first-run only */}
-              {isFirstRun && (
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    focusedField === 'confirmPassword' && styles.inputWrapperFocused,
-                  ]}
-                >
-                  <View style={styles.inputIcon}>
-                    <Ionicons name="lock-closed-outline" size={20} color={COLORS.textMuted} />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirmar contraseña"
-                    placeholderTextColor={COLORS.textMuted}
-                    value={confirmPassword}
-                    onChangeText={(t) => { setConfirmPassword(t); clearError(); }}
-                    onFocus={() => setFocusedField('confirmPassword')}
-                    onBlur={() => setFocusedField(null)}
-                    secureTextEntry
-                    editable={!isBusy}
-                  />
-                </View>
-              )}
             </View>
 
             {/* Submit Button */}
@@ -350,7 +250,7 @@ export default function LoginScreen() {
                 <ActivityIndicator size="small" color={COLORS.text} />
               ) : (
                 <Text style={styles.submitButtonText}>
-                  {isFirstRun ? 'Crear Cuenta de Administrador' : 'Iniciar Sesión'}
+                  Iniciar Sesión
                 </Text>
               )}
             </TouchableOpacity>

@@ -16,27 +16,24 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     const inLoginScreen = segments[0] === 'login';
     const inEnrollScreen = segments[0] === 'enroll';
+    const inRoot = segments.length === (0 as number);
 
     if (!isAuthenticated && !inLoginScreen) {
       // No autenticado y no está en login → redirigir a login
       router.replace('/login');
     } else if (isAuthenticated) {
-      const profile = profiles.find((p) => p.id === currentUser?.id);
-      const hasValidFaceDescriptor = profile && profile.faceDescriptor !== null;
+      // Verificar si el usuario ya registró su rostro en este dispositivo
+      const hasEnrolledFace = profiles.some(p => p.id === currentUser?.id);
 
-      if (!hasValidFaceDescriptor) {
-        if (!inEnrollScreen) {
-          // Autenticado pero sin rostro válido, redirigir a enroll
-          router.replace('/enroll');
-        }
-      } else {
-        if (inLoginScreen || inEnrollScreen) {
-          // Autenticado y con rostro válido, redirigir a tabs
-          router.replace('/(tabs)');
-        }
+      if (!hasEnrolledFace && !inEnrollScreen) {
+        // Autenticado pero no tiene rostro -> obligarlo a registrar su rostro
+        router.replace('/enroll');
+      } else if (hasEnrolledFace && (inLoginScreen || inEnrollScreen || inRoot)) {
+        // Autenticado y ya tiene rostro -> no puede ir a login ni a enroll, va a tabs
+        router.replace('/(tabs)');
       }
     }
-  }, [isAuthenticated, isLoading, isAppLoading, segments, currentUser, profiles]);
+  }, [isAuthenticated, isLoading, isAppLoading, segments, profiles, currentUser]);
 
   return <>{children}</>;
 }
