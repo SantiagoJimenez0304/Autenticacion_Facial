@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { UserAccount } from '../types';
+import { getServerAddress } from './faceApi';
 
 const KEYS = {
-  ACCOUNTS: 'geo_face_accounts',
   SESSION: 'geo_face_session',
 };
 
@@ -41,42 +41,18 @@ async function secureRemoveItem(key: string): Promise<void> {
   }
 }
 
-// --- Password Hashing (SHA-256, pure JS, no extra deps) ---
+// --- Account CRUD (via Cloud Backend) ---
 
-export async function hashPassword(password: string): Promise<string> {
-  // Use Web Crypto API if available (works on web + modern RN)
-  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.subtle) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  // Fallback: simple hash for environments without Web Crypto
-  // (still secure enough for local-only auth)
-  let hash = 0;
-  const str = password + '_geoface_salt_2024';
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash + char) | 0;
-  }
-  return Math.abs(hash).toString(16).padStart(16, '0');
-}
-
-// --- Account CRUD ---
-
-export async function getStoredAccounts(): Promise<UserAccount[]> {
+export async function getStoredAccounts(adminId: string): Promise<UserAccount[]> {
   try {
-    const data = await secureGetItem(KEYS.ACCOUNTS);
-    return data ? JSON.parse(data) : [];
-  } catch {
+    const res = await fetch(`${getServerAddress()}/v1/users?admin_id=${adminId}`);
+    if (!res.ok) throw new Error('Error de red o acceso denegado');
+    const data = await res.json();
+    return data.users as UserAccount[];
+  } catch (e) {
+    console.error('getStoredAccounts error:', e);
     return [];
   }
-}
-
-export async function saveAccounts(accounts: UserAccount[]): Promise<void> {
-  await secureSetItem(KEYS.ACCOUNTS, JSON.stringify(accounts));
 }
 
 export async function createAccount(
@@ -85,56 +61,61 @@ export async function createAccount(
   role: 'admin' | 'user',
   displayName: string
 ): Promise<UserAccount> {
-  const accounts = await getStoredAccounts();
-
-  // Check for duplicate username
-  const exists = accounts.find(
-    (a) => a.username.toLowerCase() === username.toLowerCase()
-  );
-  if (exists) {
-    throw new Error('Ya existe una cuenta con ese nombre de usuario.');
+  const res = await fetch(`${getServerAddress()}/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, rol: role, nombre: displayName })
+  });
+  
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al crear la cuenta en la nube');
   }
-
-  const passwordHash = await hashPassword(password);
-  const newAccount: UserAccount = {
-    id: Date.now().toString(),
-    username: username.toLowerCase().trim(),
-    passwordHash,
+  
+  return {
+    id: data.id,
+    username,
     role,
-    displayName: displayName.trim(),
-    createdAt: new Date().toISOString(),
-  };
-
-  accounts.push(newAccount);
-  await saveAccounts(accounts);
-  return newAccount;
+    displayName,
+    createdAt: new Date().toISOString()
+  } as UserAccount;
 }
 
-export async function deleteAccount(accountId: string): Promise<void> {
-  const accounts = await getStoredAccounts();
-  const filtered = accounts.filter((a) => a.id !== accountId);
-  await saveAccounts(filtered);
+export async function deleteAccount(accountId: string, adminId: string): Promise<void> {
+  const res = await fetch(`${getServerAddress()}/v1/users/${accountId}?admin_id=${adminId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Error al eliminar cuenta en la nube');
 }
 
-// --- Authentication ---
+// --- Authentication (via Cloud Backend) ---
 
 export async function authenticateUser(
   username: string,
   password: string
 ): Promise<UserAccount | null> {
-  const accounts = await getStoredAccounts();
-  const passwordHash = await hashPassword(password);
-
-  const match = accounts.find(
-    (a) =>
-      a.username.toLowerCase() === username.toLowerCase().trim() &&
-      a.passwordHash === passwordHash
-  );
-
-  return match || null;
+  try {
+    const res = await fetch(`${getServerAddress()}/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    return {
+      id: data.id,
+      username: data.username,
+      role: data.rol,
+      displayName: data.nombre,
+      createdAt: new Date().toISOString()
+    } as UserAccount;
+  } catch (e) {
+    console.error('authenticateUser error:', e);
+    return null;
+  }
 }
 
-// --- Session Persistence ---
+// --- Session Persistence (Local) ---
 
 export async function getActiveSession(): Promise<string | null> {
   try {
@@ -155,11 +136,27 @@ export async function clearSession(): Promise<void> {
 // --- Utilities ---
 
 export async function getUserById(userId: string): Promise<UserAccount | null> {
-  const accounts = await getStoredAccounts();
-  return accounts.find((a) => a.id === userId) || null;
+  try {
+    const res = await fetch(`${getServerAddress()}/v1/users/${userId}`);
+    if (!res.ok) return null;
+    return await res.json() as UserAccount;
+  } catch (e) {
+    console.error('getUserById error:', e);
+    return null;
+  }
 }
 
 export async function hasAnyAccounts(): Promise<boolean> {
-  const accounts = await getStoredAccounts();
-  return accounts.length > 0;
+  try {
+    const res = await fetch(`${getServerAddress()}/v1/auth/has-accounts`);
+    if (!res.ok) {
+      console.warn('hasAnyAccounts falló con status:', res.status);
+      throw new Error('No se pudo verificar el estado de las cuentas');
+    }
+    const data = await res.json();
+    return data.has_accounts;
+  } catch (e) {
+    console.error('hasAnyAccounts error:', e);
+    throw e; // Lanza el error para que el contexto no asuma que no hay cuentas
+  }
 }

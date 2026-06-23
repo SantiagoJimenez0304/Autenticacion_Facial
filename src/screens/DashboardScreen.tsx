@@ -64,7 +64,7 @@ const TrackingDot = memo(function TrackingDot({ isTracking }: { isTracking: bool
 export default function DashboardScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
-  const { isLoading, checkIns, locationState, startLocationTracking, stopLocationTracking } = useApp();
+  const { isLoading, checkIns, locationState, startLocationTracking, stopLocationTracking, fetchCheckIns } = useApp();
   const {
     currentLocation = null,
     isInZone = false,
@@ -73,6 +73,15 @@ export default function DashboardScreen() {
     isTracking = false,
     error = null,
   } = locationState || {};
+  useEffect(() => {
+    if (currentUser?.id) {
+      if (currentUser.role === 'admin') {
+        fetchCheckIns();
+      } else {
+        fetchCheckIns(currentUser.id);
+      }
+    }
+  }, [currentUser, fetchCheckIns]);
 
   if (isLoading) {
     return (

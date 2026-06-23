@@ -15,7 +15,7 @@ import {
     saveZone as storageSaveZone,
 } from '../services/storage';
 import { CheckIn, FaceProfile, LocationState, Zone } from '../types';
-import { getEmbedding, healthCheck } from '../services/faceApi';
+import { enrollFace, getCheckIns as apiGetCheckIns, getAllCheckIns as apiGetAllCheckIns, healthCheck } from '../services/faceApi';
 
 interface AppContextType {
   profiles: FaceProfile[];
@@ -33,6 +33,7 @@ interface AppContextType {
   deleteZone: (id: string) => Promise<void>;
   addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
   clearCheckIns: () => Promise<void>;
+  fetchCheckIns: (userId?: string) => Promise<void>;
   setThreshold: (value: number) => Promise<void>;
   startLocationTracking: () => Promise<void>;
   stopLocationTracking: () => void;
@@ -58,12 +59,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         Promise.all([
           getProfiles(),
           getZones(),
-          getCheckIns(),
           getThreshold(),
-        ]).then(([storedProfiles, storedZones, storedCheckIns, storedThreshold]) => {
+        ]).then(([storedProfiles, storedZones, storedThreshold]) => {
           setProfiles(storedProfiles);
           setZones(storedZones);
-          setCheckIns(storedCheckIns);
           setThresholdState(storedThreshold);
         }).catch((error) => {
           console.error('Error al cargar datos:', error);
@@ -85,7 +84,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id,
       name,
       photoUris: [],
-      faceDescriptor: null,
       createdAt: new Date().toLocaleDateString('es-MX', {
         day: '2-digit',
         month: 'short',
@@ -99,10 +97,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const localPhotoUri = await saveFacePhoto(id, photoUri, 0);
         newProfile.photoUris = [localPhotoUri];
 
-          const serverOnline = await healthCheck();
+        const serverOnline = await healthCheck();
         if (serverOnline) {
-          const embedding = await getEmbedding(localPhotoUri);
-          newProfile.faceDescriptor = embedding || null;
+          // Enrolar el rostro en el servidor
+          await enrollFace(localPhotoUri, id, name);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -118,16 +116,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateProfilePhoto = useCallback(async (id: string, photoUri: string) => {
     try {
       const localPhotoUri = await saveFacePhoto(id, photoUri, 0);
-      let faceDescriptor: number[] | null = null;
 
       try {
         const serverOnline = await healthCheck();
         if (serverOnline) {
-          faceDescriptor = await getEmbedding(localPhotoUri);
+          const profile = profiles.find(p => p.id === id);
+          await enrollFace(localPhotoUri, id, profile?.name);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error('Error al obtener embedding facial:', msg);
+        console.error('Error al enrolar rostro en el servidor:', msg);
       }
 
       setProfiles((prev) => {
@@ -137,7 +135,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           next[idx] = {
             ...next[idx],
             photoUris: [localPhotoUri],
-            faceDescriptor,
             updatedAt: new Date().toISOString(),
           };
           storageSaveProfile(next[idx]).catch(e => console.error('Error guardando perfil:', e));
@@ -189,7 +186,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addCheckIn = useCallback(async (checkInData: Omit<CheckIn, 'id' | 'timestamp'>) => {
     const newCheckIn: CheckIn = {
       ...checkInData,
-      id: Date.now().toString(),
+      id: Date.now(),
       timestamp: new Date().toISOString(),
     };
     try {
@@ -208,6 +205,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('Error limpiando check-ins:', e);
     }
   }, []);
+
+  const fetchCheckIns = useCallback(async (userId?: string) => {
+    try {
+      const records = userId ? await apiGetCheckIns(userId) : await apiGetAllCheckIns();
+      const mappedCheckIns: CheckIn[] = records.map(r => {
+        const zone = zones.find(z => z.id === r.zoneId) || {
+          id: r.zoneId || '0', name: 'Desconocida', center: {latitude: 0, longitude: 0}, radius: 100
+        };
+        const profile = profiles.find(p => p.id === r.userId);
+        return {
+          id: r.id,
+          profileId: r.userId,
+          profileName: profile?.name || 'Usuario ' + r.userId,
+          zone,
+          verification: {
+            isMatch: r.isMatch,
+            confidence: (r.confidence || 0) / 100,
+            matchedProfile: profile || null,
+            timestamp: r.timestamp || new Date().toISOString()
+          },
+          location: r.location,
+          timestamp: r.timestamp || new Date().toISOString()
+        };
+      });
+      setCheckIns(mappedCheckIns);
+    } catch (e) {
+      console.error('Error obteniendo historial de asistencias:', e);
+    }
+  }, [zones, profiles]);
 
   // Threshold operations
   const setThreshold = useCallback(async (value: number) => {
@@ -232,6 +258,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteZone,
         addCheckIn,
         clearCheckIns,
+        fetchCheckIns,
         setThreshold,
         startLocationTracking: locationHook.startTracking,
         stopLocationTracking: locationHook.stopTracking,

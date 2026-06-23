@@ -56,9 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         await loadServerAddress();
 
-        // 1. Verificar si existen cuentas registradas
-        const existenCuentas = await hasAnyAccounts();
-        setIsFirstRun(!existenCuentas);
+        // 1. Verificar si existen cuentas registradas (si falla la red, asumimos false temporalmente para evitar bloquear)
+        try {
+          const existenCuentas = await hasAnyAccounts();
+          setIsFirstRun(!existenCuentas);
+        } catch (e) {
+          console.warn('Asumiendo que hay cuentas temporalmente por error de red');
+        }
 
         // 2. Verificar si hay una sesión activa guardada
         const sessionUserId = await getActiveSession();
@@ -67,12 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (user) {
             setCurrentUser(user);
             setIsAuthenticated(true);
+            
+            // 3. Cargar la lista completa de cuentas SOLO si es administrador
+            if (user.role === 'admin') {
+              const storedAccounts = await getStoredAccounts(user.id);
+              setAccounts(storedAccounts);
+            }
           }
         }
-
-        // 3. Cargar la lista completa de cuentas
-        const storedAccounts = await getStoredAccounts();
-        setAccounts(storedAccounts);
       } catch (error) {
         console.error('Error al inicializar la autenticación:', error);
       } finally {
@@ -119,15 +125,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Recargar la lista de cuentas desde el almacenamiento
   const refreshAccounts = useCallback(async () => {
     try {
-      const storedAccounts = await getStoredAccounts();
-      setAccounts(storedAccounts);
+      // 1. Siempre verificar si existen cuentas para saber si estamos en First Run
+      try {
+        const existenCuentas = await hasAnyAccounts();
+        setIsFirstRun(!existenCuentas);
+      } catch (e) {
+        // En caso de error de red, NO cambiamos el estado de isFirstRun a true
+        console.warn('Error al verificar cuentas, manteniendo estado actual');
+      }
 
-      // Actualizar isFirstRun según si hay cuentas
-      setIsFirstRun(storedAccounts.length === 0);
+      // 2. Solo intentar descargar la lista completa si somos administradores
+      if (currentUser && currentUser.role === 'admin') {
+        const storedAccounts = await getStoredAccounts(currentUser.id);
+        setAccounts(storedAccounts);
+      } else {
+        setAccounts([]); // Los usuarios normales no tienen acceso a la lista
+      }
     } catch (error) {
       console.error('Error al recargar las cuentas:', error);
     }
-  }, []);
+  }, [currentUser]);
+
+  // Cargar cuentas automáticamente cuando un administrador inicia sesión
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      refreshAccounts();
+    }
+  }, [currentUser, refreshAccounts]);
 
   // Crear una nueva cuenta de usuario
   const createAccount = useCallback(async (
@@ -156,9 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await refreshAccounts();
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error al crear la cuenta:', error);
-      const mensaje = error?.message || 'Ocurrió un error al crear la cuenta. Intente nuevamente.';
+      const mensaje = error instanceof Error ? error.message : 'Ocurrió un error al crear la cuenta. Intente nuevamente.';
       return { success: false, error: mensaje };
     }
   }, [refreshAccounts]);
@@ -166,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Eliminar una cuenta de usuario
   const deleteAccount = useCallback(async (accountId: string) => {
     try {
-      await serviceDeleteAccount(accountId);
+      await serviceDeleteAccount(accountId, currentUser?.id || '');
 
       // Recargar la lista de cuentas tras la eliminación
       await refreshAccounts();
