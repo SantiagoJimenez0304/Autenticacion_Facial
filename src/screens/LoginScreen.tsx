@@ -62,11 +62,16 @@ export default function LoginScreen() {
   const [serverIp, setServerIp] = useState('');
   const [testingConnection, setTestingConnection] = useState(false);
 
-  const openServerSettings = () => {
-    const currentAddr = getServerAddress();
-    let ip = currentAddr.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
-    setServerIp(ip);
-    setServerModalVisible(true);
+  const openServerSettings = async () => {
+    try {
+      const currentAddr = await getServerAddress();
+      let ip = currentAddr.replace(/^https?:\/\//, '').replace(/\/api\/v2$/, '');
+      setServerIp(ip);
+      setServerModalVisible(true);
+    } catch (e) {
+      setServerIp('');
+      setServerModalVisible(true);
+    }
   };
 
   const closeServerSettings = () => {
