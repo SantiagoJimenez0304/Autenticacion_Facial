@@ -371,8 +371,8 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* Section: User Management (Admin only) */}
-        {currentUser?.role === 'admin' && (
+        {/* Section: User Management (Admin only) - Deshabilitado en flujo empresarial JIT */}
+        {false && currentUser?.role === 'admin' && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIcon}>

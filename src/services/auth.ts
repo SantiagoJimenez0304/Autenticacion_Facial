@@ -41,11 +41,34 @@ async function secureRemoveItem(key: string): Promise<void> {
   }
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  const fetchPromise = fetch(url, {
+    ...options,
+    signal: controller.signal,
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('El servidor no respondió a tiempo (Timeout).')), timeout + 100);
+  });
+
+  try {
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 // --- Account CRUD (via Cloud Backend) ---
 
 export async function getStoredAccounts(adminId: string): Promise<UserAccount[]> {
   try {
-    const res = await fetch(`${getServerAddress()}/v1/users?admin_id=${adminId}`);
+    const res = await fetchWithTimeout(`${getServerAddress()}/v1/users?admin_id=${adminId}`);
     if (!res.ok) throw new Error('Error de red o acceso denegado');
     const data = await res.json();
     return data.users as UserAccount[];
@@ -57,7 +80,7 @@ export async function getStoredAccounts(adminId: string): Promise<UserAccount[]>
 
 
 export async function deleteAccount(accountId: string, adminId: string): Promise<void> {
-  const res = await fetch(`${getServerAddress()}/v1/users/${accountId}?admin_id=${adminId}`, { method: 'DELETE' });
+  const res = await fetchWithTimeout(`${getServerAddress()}/v1/users/${accountId}?admin_id=${adminId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error al eliminar cuenta en la nube');
 }
 
@@ -69,13 +92,19 @@ export async function authenticateUser(
 ): Promise<UserAccount | null> {
   try {
     const body = `username=${encodeURIComponent(cedula)}&password=${encodeURIComponent(password)}`;
-    const res = await fetch(`${getServerAddress()}/auth/login`, {
+    const res = await fetchWithTimeout(`${getServerAddress()}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body
     });
     
-    if (!res.ok) return null;
+    if (res.status === 401 || res.status === 403 || res.status === 400 || res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      throw new Error(`Error en el servidor: ${res.status}`);
+    }
     
     const data = await res.json();
     if (data.access_token) {
@@ -97,9 +126,9 @@ export async function authenticateUser(
       } as UserAccount;
     }
     return null;
-  } catch (e) {
+  } catch (e: any) {
     console.error('authenticateUser error:', e);
-    return null;
+    throw new Error(e.message || 'No se pudo conectar al servidor.');
   }
 }
 
@@ -125,7 +154,7 @@ export async function clearSession(): Promise<void> {
 
 export async function getUserById(token: string): Promise<UserAccount | null> {
   try {
-    const res = await fetch(`${getServerAddress()}/auth/yo`, {
+    const res = await fetchWithTimeout(`${getServerAddress()}/auth/yo`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -149,4 +178,13 @@ export async function getUserById(token: string): Promise<UserAccount | null> {
 export async function hasAnyAccounts(): Promise<boolean> {
   // Ahora siempre retornamos true ya que no se permite crear cuentas y asumimos que existen en el ERP
   return true;
+}
+
+export async function createAccount(
+  username: string,
+  password: string,
+  role: 'admin' | 'user',
+  displayName: string
+): Promise<UserAccount> {
+  throw new Error('La creación de cuentas desde la aplicación móvil no está permitida en el flujo empresarial.');
 }

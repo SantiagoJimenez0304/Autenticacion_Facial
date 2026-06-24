@@ -130,9 +130,11 @@ async function request<T>(path: string, body: unknown = null, timeout = REQUEST_
         const errData = JSON.parse(text);
         if (errData && errData.error) {
           errorMsg = errData.error;
+        } else if (errData && errData.detail) {
+          errorMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
         }
       } catch (e) {
-        // No es JSON válido, mantener el mensaje genérico para no mostrar HTML o trazas de error al usuario
+        // No es JSON válido
       }
       throw new FaceApiError(errorMsg, `HTTP_${res.status}`);
     }
@@ -202,10 +204,9 @@ export async function verifyFace(
   const image = await photoToBase64(photoUri);
   return request<VerifyResponse>('/biometria/asistencia', {
     image,
-    user_id: userId,
-    zone_id: zoneId || null,
-    latitude: latitude || 0.0,
-    longitude: longitude || 0.0
+    zona_id: null,
+    latitud: latitude || 0.0,
+    longitud: longitude || 0.0
   });
 }
 

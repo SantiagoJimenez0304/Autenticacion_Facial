@@ -99,15 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: 'Usuario o contraseña incorrectos.' };
       }
 
-      // Guardar sesión y actualizar estado
-      await setActiveSession(user.id);
+      // NO sobreescribir la sesión aquí, ya fue guardada como JWT en authenticateUser
       setCurrentUser(user);
       setIsAuthenticated(true);
 
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al iniciar sesión:', error);
-      return { success: false, error: 'Ocurrió un error al iniciar sesión. Intente nuevamente.' };
+      return { success: false, error: error.message || 'Ocurrió un error al iniciar sesión. Verifica tu conexión e intenta nuevamente.' };
     }
   }, []);
 

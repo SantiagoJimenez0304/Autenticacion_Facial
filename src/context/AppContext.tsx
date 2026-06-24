@@ -105,6 +105,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('Error al procesar foto facial:', msg);
+        // Lanzar el error para que la UI sepa que falló y NO guarde localmente
+        throw err;
       }
     }
 

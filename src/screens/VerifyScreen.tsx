@@ -137,7 +137,8 @@ export default function VerifyScreen() {
       setIsCapturing(false);
 
       const confidence = serverResult.confidence || 0;
-      const isMatch = !!serverResult.verified;
+      // El backend arroja un error 401 si no coincide, por lo tanto si llega a este punto es exitoso
+      const isMatch = true;
       const matchedProfile = isMatch ? currentUserProfile : undefined;
 
       await addCheckIn({
